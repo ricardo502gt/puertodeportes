@@ -1,0 +1,65 @@
+═══════════════════════════════════════════════════════════════
+  LIGA CARIBE — Sistema de Gestión
+  Puerto Barrios, Izabal, Guatemala 2026
+═══════════════════════════════════════════════════════════════
+
+REQUISITO PREVIO
+────────────────
+Instalar Node.js desde: https://nodejs.org  (versión 18 o mayor)
+
+PRIMERA VEZ (solo una vez)
+──────────────────────────
+1. Abrir la carpeta "liga-caribe" en la terminal
+   (clic derecho en la carpeta → "Abrir en Terminal")
+
+2. Instalar dependencias:
+   npm install
+
+3. Arrancar el servidor:
+   npm start
+
+4. Abrir en el navegador:
+   http://localhost:3000
+
+CADA VEZ QUE QUIERAS USARLO
+────────────────────────────
+1. Abrir terminal en la carpeta liga-caribe
+2. npm start
+3. Abrir http://localhost:3000
+
+USUARIOS DEL PANEL (http://localhost:3000/panel.html)
+──────────────────────────────────────────────────────
+  super    /  super123    → Super Admin (acceso total)
+  admin    /  admin123    → Admin Liga (sin borrar equipos)
+
+  Los delegados los crea el Super Admin desde Panel → Usuarios
+
+ESTRUCTURA DEL PROYECTO
+────────────────────────
+  liga-caribe/
+  ├── server.js          ← Servidor Node.js (no tocar)
+  ├── db/liga.db         ← Base de datos SQLite
+  ├── uploads/
+  │   ├── jugadores/     ← Fotos de jugadores
+  │   └── equipos/       ← Escudos de equipos
+  └── public/
+      ├── index.html         ← Página principal
+      ├── resultados.html    ← Sección Resultados
+      ├── equipos.html       ← Sección Equipos
+      ├── programacion.html  ← Sección Programación
+      └── panel.html         ← Panel de administración
+
+BACKUP (RESPALDO)
+─────────────────
+Desde Panel Admin → pestaña "💾 Respaldo":
+  • Descarga backup .db  → guarda en USB o Google Drive
+  • Exporta JSON         → copia de todos los datos
+
+Para restaurar: reemplaza el archivo db/liga.db con el backup.
+
+PARA SUBIR A INTERNET (opcional)
+──────────────────────────────────
+Se puede publicar en servicios como Railway.app o Render.com
+(ambos tienen plan gratuito). Contáctanos para instrucciones.
+
+═══════════════════════════════════════════════════════════════

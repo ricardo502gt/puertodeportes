@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel Admin — Liga Caribe</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-ov" id="loginOv">
+  <div class="login-card">
+    <div class="login-ball">⚽</div>
+    <div class="login-title">ACCESO</div>
+    <div class="login-sub">Panel de Gestión · Liga Caribe</div>
+    <div class="login-field"><label>Usuario</label><input id="lUser" type="text" placeholder="usuario" autocomplete="username"/></div>
+    <div class="login-field"><label>Contraseña</label><input id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <button class="btn-login" onclick="doLogin()">INGRESAR</button>
+    <div class="login-err hidden" id="lErr">❌ Usuario o contraseña incorrectos</div>
+    <div style="margin-top:16px">
+      <a class="btn btn-ghost btn-sm" href="/">← Volver al sitio</a>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="panelApp" class="hidden">
+  <div class="panel-bg"></div>
+  <header class="p-header">
+    <div class="p-header-inner">
+      <div class="p-brand">
+        <span class="p-ball">⚽</span>
+        <div>
+          <div class="p-name">PANEL LIGA CARIBE</div>
+          <div class="p-sub" id="pSubTxt"></div>
+        </div>
+      </div>
+      <div class="p-actions">
+        <span class="p-badge" id="pBadge"></span>
+        <a class="btn btn-ghost btn-sm" href="/" target="_blank">🌐 Sitio</a>
+        <button class="btn btn-r btn-sm" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+    <div class="p-nav" id="pNav"></div>
+  </header>
+  <div class="p-catbar" id="pCatBar"></div>
+  <main class="p-main" id="pMain"></main>
+</div>
+
+<!-- MODALS -->
+<div class="modal-ov hidden" id="modalOv">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<!-- RESULTADO MODAL -->
+<div class="modal-ov hidden" id="resultOv">
+  <div class="modal" id="resultModal" style="max-width:680px"></div>
+</div>
+
+<!-- CONVOCATORIA MODAL -->
+<div class="modal-ov hidden" id="convOv">
+  <div class="modal" id="convModal" style="max-width:780px"></div>
+</div>
+
+<!-- ALERT -->
+<div class="alert-ov hidden" id="alertOv">
+  <div class="alert-box">
+    <div class="alert-msg" id="alertMsg"></div>
+    <button class="alert-btn" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/panel.js"></script>
+</body>
+</html>

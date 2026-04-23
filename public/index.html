@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Liga Caribe — Fútbol Puerto Barrios, Izabal</title>
+  <meta name="description" content="El campeonato de fútbol de Puerto Barrios, Izabal. Resultados, tabla, jugadores y más."/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<div id="mainNav"></div>
+
+<!-- HERO -->
+<div class="hero" id="inicio">
+  <div class="hero-mesh"></div>
+  <div class="hero-ring hr1"></div>
+  <div class="hero-ring hr2"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">🌊 Temporada 2026 · Puerto Barrios</div>
+    <div class="hero-ball">⚽</div>
+    <h1 class="hero-h1">LIGA<br/><span>CARIBE</span></h1>
+    <p class="hero-p">El campeonato de fútbol de Puerto Barrios, Izabal. Cuatro categorías, corazón caribeño.</p>
+    <div class="hero-ctas">
+      <a class="btn-cta btn-cta-main" href="#sec-live">🔴 En Vivo</a>
+      <a class="btn-cta btn-cta-out"  href="/programacion.html">📅 Programación</a>
+    </div>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+</div>
+
+<!-- EN VIVO -->
+<section id="sec-live" style="background:var(--navy2)">
+  <div class="sec-inner">
+    <div class="sec-head">
+      <div class="sec-tag">🔴 Ahora</div>
+      <h2 class="sec-h2">Partidos <em>En Vivo</em></h2>
+      <p class="sec-sub">Marcadores actualizados en tiempo real</p>
+    </div>
+    <div id="liveContent"></div>
+  </div>
+</section>
+
+<!-- RESULTADOS RECIENTES -->
+<section id="sec-resultados" style="background:var(--navy)">
+  <div class="sec-inner">
+    <div class="sec-head">
+      <div class="sec-tag">📅 Jornadas</div>
+      <h2 class="sec-h2">Últimos <em>Resultados</em></h2>
+    </div>
+    <div id="resGrid"></div>
+    <div style="text-align:center;margin-top:24px">
+      <a class="btn btn-ghost" href="/resultados.html">Ver todos los resultados →</a>
+    </div>
+  </div>
+</section>
+
+<!-- TABLA -->
+<section id="sec-tabla" style="background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%)">
+  <div class="sec-inner">
+    <div class="sec-head">
+      <div class="sec-tag">🏆 Posiciones</div>
+      <h2 class="sec-h2">Tabla de <em>Posiciones</em></h2>
+    </div>
+    <div class="cat-pills" id="tablaCatPills"></div>
+    <div class="tabla-wrap t-wrap" id="tablaTable"></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section id="sec-stats" style="background:var(--navy2)">
+  <div class="sec-inner">
+    <div class="sec-head">
+      <div class="sec-tag">📊 Stats</div>
+      <h2 class="sec-h2">Goleadores <em>&amp; Tarjetas</em></h2>
+    </div>
+    <div class="cat-pills" id="statsCatPills"></div>
+    <div class="two-col" id="statsContent"></div>
+  </div>
+</section>
+
+<!-- JUGADORES -->
+<section id="sec-jugadores" style="background:var(--navy)">
+  <div class="sec-inner">
+    <div class="sec-head">
+      <div class="sec-tag">👥 Planteles</div>
+      <h2 class="sec-h2">Jugadores <em>Registrados</em></h2>
+    </div>
+    <div class="cat-pills" id="jugCatPills"></div>
+    <div class="jug-grid" id="jugGrid"></div>
+    <div style="text-align:center;margin-top:24px">
+      <a class="btn btn-ghost" href="/equipos.html">Ver todos los equipos →</a>
+    </div>
+  </div>
+</section>
+
+<!-- NOTICIAS (partidos recientes) -->
+<section id="sec-noticias" style="background:var(--navy2)">
+  <div class="sec-inner">
+    <div class="sec-head">
+      <div class="sec-tag">📰 Noticias</div>
+      <h2 class="sec-h2">Últimos <em>Encuentros</em></h2>
+    </div>
+    <div class="not-grid" id="notGrid"></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="f-name">⚽ LIGA CARIBE</div>
+      <div class="f-sub">Puerto Barrios · Izabal · Guatemala</div>
+      <div style="margin-top:12px;font-size:12px;color:#3a7080;line-height:1.6">El campeonato local<br/>más emocionante del Caribe guatemalteco.</div>
+    </div>
+    <div class="footer-links">
+      <h4>Navegación</h4>
+      <a href="/">Inicio</a>
+      <a href="/resultados.html">Resultados</a>
+      <a href="/equipos.html">Equipos</a>
+      <a href="/programacion.html">Programación</a>
+    </div>
+    <div class="footer-links">
+      <h4>Categorías</h4>
+      <a href="/equipos.html">Sub-12</a>
+      <a href="/equipos.html">Sub-15</a>
+      <a href="/equipos.html">Sub-18</a>
+      <a href="/equipos.html">Mayores</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 Liga Caribe · Todos los derechos reservados 🌊</div>
+    <a class="btn btn-ghost btn-sm" href="/panel.html">⚙️ Panel Admin</a>
+  </div>
+</footer>
+
+<!-- ALERT -->
+<div class="alert-ov hidden" id="alertOv">
+  <div class="alert-box">
+    <div class="alert-msg" id="alertMsg"></div>
+    <button class="alert-btn" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/index.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resultados — Liga Caribe</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<div id="mainNav"></div>
+
+<div class="page-header">
+  <div class="sec-inner">
+    <div class="sec-tag">📅 Jornadas</div>
+    <h1 class="page-h1">RESULTADOS <span>&amp; PRÓXIMOS</span></h1>
+    <p class="sec-sub" style="margin-top:8px">Historial completo de partidos por categoría</p>
+  </div>
+</div>
+
+<section style="background:var(--navy);padding:40px 20px 60px">
+  <div class="sec-inner">
+    <!-- Filtros -->
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:28px">
+      <div>
+        <span style="font-size:10px;font-weight:800;color:var(--teal);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Categoría</span>
+        <div class="cat-pills" style="justify-content:flex-start;margin-bottom:0" id="catPills"></div>
+      </div>
+      <div>
+        <span style="font-size:10px;font-weight:800;color:var(--teal);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Estado</span>
+        <div class="cat-pills" style="justify-content:flex-start;margin-bottom:0" id="estadoPills"></div>
+      </div>
+    </div>
+
+    <div id="resContent"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-bottom" style="max-width:1100px;margin:0 auto">
+    <div class="footer-copy">© 2026 Liga Caribe</div>
+    <a class="btn btn-ghost btn-sm" href="/">← Inicio</a>
+  </div>
+</footer>
+
+<div class="alert-ov hidden" id="alertOv">
+  <div class="alert-box">
+    <div class="alert-msg" id="alertMsg"></div>
+    <button class="alert-btn" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/resultados.js"></script>
+</body>
+</html>

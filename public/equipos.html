@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Equipos — Liga Caribe</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<div id="mainNav"></div>
+
+<div class="page-header">
+  <div class="sec-inner">
+    <div class="sec-tag">🛡️ Planteles</div>
+    <h1 class="page-h1">EQUIPOS <span>REGISTRADOS</span></h1>
+    <p class="sec-sub" style="margin-top:8px">Todos los equipos y sus jugadores por categoría</p>
+  </div>
+</div>
+
+<section style="background:var(--navy);padding:40px 20px 60px">
+  <div class="sec-inner">
+    <div class="cat-pills" id="catPills"></div>
+    <div id="equiposContent"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-bottom" style="max-width:1100px;margin:0 auto">
+    <div class="footer-copy">© 2026 Liga Caribe</div>
+    <a class="btn btn-ghost btn-sm" href="/">← Inicio</a>
+  </div>
+</footer>
+
+<div class="alert-ov hidden" id="alertOv">
+  <div class="alert-box">
+    <div class="alert-msg" id="alertMsg"></div>
+    <button class="alert-btn" onclick="closeAlert()">OK</button>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/equipos.js"></script>
+</body>
+</html>
