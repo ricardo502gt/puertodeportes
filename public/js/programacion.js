@@ -141,7 +141,7 @@ async function openConvModal(partidoId) {
             ${jugadores.map(j => `
               <div style="background:rgba(0,30,50,.6);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
                 <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--teal3);display:flex;align-items:center;justify-content:center;margin:0 auto 7px;font-size:20px">
-                  ${j.foto ? `<img src="/uploads/jugadores/${j.foto}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
+                  ${playerAvatar(j.foto)}
                 </div>
                 <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--orange)">${j.numero ?? '—'}</div>
                 <div style="font-weight:800;font-size:11px;color:var(--white)">${j.jugador_nombre}</div>

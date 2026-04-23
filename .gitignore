@@ -4,3 +4,5 @@ uploads/jugadores/
 uploads/equipos/
 *.db
 npm-debug.log*
+serviceAccount.json
+.env

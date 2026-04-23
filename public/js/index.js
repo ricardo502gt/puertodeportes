@@ -114,7 +114,7 @@ async function renderTabla() {
         <td class="tdl">
           <div style="display:flex;align-items:center;gap:8px">
             <div style="width:24px;height:24px;border-radius:50%;overflow:hidden;background:var(--teal3);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">
-              ${r.escudo ? `<img src="/uploads/equipos/${r.escudo}" style="width:100%;height:100%;object-fit:cover">` : '🛡️'}
+              ${escudoAvatar(r.escudo)}
             </div>
             ${r.nombre}
           </div>

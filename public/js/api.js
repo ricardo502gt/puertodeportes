@@ -53,17 +53,21 @@ function fmtShort(dateStr) {
   return `${d.getDate()} ${m[d.getMonth()]}`;
 }
 
-function photoUrl(filename, type = 'jugadores') {
-  return filename ? `/uploads/${type}/${filename}` : null;
+function imgSrc(val, folder) {
+  if (!val) return null;
+  if (val.startsWith('http')) return val;          // Firebase Storage URL
+  return `/uploads/${folder}/${val}`;              // legacy local path
 }
 
-function playerAvatar(foto, size = 44) {
-  if (foto) return `<img src="/uploads/jugadores/${foto}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+function playerAvatar(foto) {
+  const src = imgSrc(foto, 'jugadores');
+  if (src) return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   return '👤';
 }
 
 function escudoAvatar(escudo) {
-  if (escudo) return `<img src="/uploads/equipos/${escudo}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+  const src = imgSrc(escudo, 'equipos');
+  if (src) return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover">`;
   return '🛡️';
 }
 
