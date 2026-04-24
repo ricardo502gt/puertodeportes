@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
 // Panel Admin — Liga Caribe
 // ═══════════════════════════════════════════════════════════════
-let cu = null, cats = [], allEquipos = [];
-let pTab = 'partidos', pCat = '';
+let cu = null, allCamps = [], cats = [], allEquipos = [];
+let pCamp = null, pTab = 'partidos', pCat = '';
 
 // ── Login ─────────────────────────────────────────────────────
 async function doLogin() {
@@ -39,18 +39,55 @@ async function init() {
 
 async function initPanel() {
   document.getElementById('pSubTxt').textContent =
-    cu.rol === 'super'    ? 'Super Administrador'  :
-    cu.rol === 'admin'    ? 'Administrador de Liga' :
-    `Delegado — equipo asignado`;
+    cu.rol === 'super' ? 'Super Administrador' :
+    cu.rol === 'admin' ? 'Administrador de Liga' : 'Delegado — equipo asignado';
   const badge = document.getElementById('pBadge');
-  badge.textContent = cu.rol === 'super' ? `👑 ${cu.nombre}` : cu.rol === 'admin' ? `⚙️ ${cu.nombre}` : `🏅 ${cu.nombre}`;
-  badge.className = `p-badge ${cu.rol === 'super' ? 'pb-super' : cu.rol === 'admin' ? 'pb-admin' : 'pb-del'}`;
+  badge.textContent = cu.rol==='super' ? `👑 ${cu.nombre}` : cu.rol==='admin' ? `⚙️ ${cu.nombre}` : `🏅 ${cu.nombre}`;
+  badge.className = `p-badge ${cu.rol==='super'?'pb-super':cu.rol==='admin'?'pb-admin':'pb-del'}`;
 
-  cats      = await API.get('/api/categorias');
-  allEquipos = await API.get('/api/equipos');
-  pCat      = cats[0]?.nombre || '';
-  pTab      = cu.rol === 'delegado' ? 'jugadores' : 'partidos';
+  allCamps  = await API.get('/api/campeonatos');
+  const activo = allCamps.find(c => c.estado === 'activo') || allCamps[0];
+  pCamp = activo?.id || null;
 
+  await loadCampData();
+  pTab = cu.rol === 'delegado' ? 'jugadores' : 'partidos';
+
+  renderCampBar();
+  renderPNav();
+  renderTab();
+}
+
+async function loadCampData() {
+  if (!pCamp) { cats = []; allEquipos = []; pCat = ''; return; }
+  [cats, allEquipos] = await Promise.all([
+    API.get(`/api/categorias?campeonato_id=${pCamp}`),
+    API.get(`/api/equipos?campeonato_id=${pCamp}`),
+  ]);
+  pCat = cats[0]?.nombre || '';
+}
+
+// ── Campeonato bar ────────────────────────────────────────────
+function renderCampBar() {
+  const bar = document.getElementById('pCampBar');
+  if (!bar) return;
+  const canAdd = cu.rol !== 'delegado';
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-weight:700">Campeonato:</span>
+      ${allCamps.map(c => `
+        <button class="p-cat${c.id===pCamp?' on':''}" onclick="setCamp('${c.id}')"
+                style="${c.estado==='finalizado'?'opacity:0.6':''}">
+          ${c.estado==='activo'?'🟢':'🔴'} ${c.nombre}
+        </button>`).join('')}
+      ${canAdd ? `<button class="btn btn-t btn-xs" onclick="openCampModal()">+ Campeonato</button>` : ''}
+    </div>`;
+}
+
+async function setCamp(id) {
+  pCamp = id;
+  await loadCampData();
+  pTab = cu.rol === 'delegado' ? 'jugadores' : 'partidos';
+  renderCampBar();
   renderPNav();
   renderPCatBar();
   renderTab();
@@ -58,8 +95,8 @@ async function initPanel() {
 
 // ── Tab nav ───────────────────────────────────────────────────
 function tabsForRole() {
-  if (cu.rol === 'super')  return ['partidos','convocatorias','equipos','jugadores','estadisticas','usuarios','backup'];
-  if (cu.rol === 'admin')  return ['partidos','convocatorias','equipos','jugadores','estadisticas'];
+  if (cu.rol === 'super')  return ['partidos','convocatorias','equipos','jugadores','estadisticas','categorias','campeonatos','usuarios','backup'];
+  if (cu.rol === 'admin')  return ['partidos','convocatorias','equipos','jugadores','estadisticas','categorias','campeonatos'];
   return ['jugadores','convocatorias'];
 }
 const TAB_LABELS = {
@@ -68,13 +105,15 @@ const TAB_LABELS = {
   equipos:       '🛡️ Equipos',
   jugadores:     '👤 Jugadores',
   estadisticas:  '📊 Estadísticas',
+  categorias:    '🏷️ Categorías',
+  campeonatos:   '🏆 Campeonatos',
   usuarios:      '🔑 Usuarios',
   backup:        '💾 Respaldo',
 };
 
 function renderPNav() {
   document.getElementById('pNav').innerHTML = tabsForRole().map(t =>
-    `<button class="p-nb${t === pTab ? ' on' : ''}" onclick="setTab('${t}')">${TAB_LABELS[t]}</button>`
+    `<button class="p-nb${t===pTab?' on':''}" onclick="setTab('${t}')">${TAB_LABELS[t]}</button>`
   ).join('');
 }
 function setTab(t) { pTab = t; renderPNav(); renderTab(); }
@@ -85,7 +124,7 @@ function renderPCatBar() {
   const bar = document.getElementById('pCatBar');
   if (!TABS_WITH_CAT.includes(pTab)) { bar.innerHTML = ''; return; }
   bar.innerHTML = cats.map(c =>
-    `<button class="p-cat${c.nombre === pCat ? ' on' : ''}" onclick="setPCat('${c.nombre}')">${c.nombre}</button>`
+    `<button class="p-cat${c.nombre===pCat?' on':''}" onclick="setPCat('${c.nombre}')">${c.nombre}</button>`
   ).join('');
 }
 function setPCat(c) { pCat = c; renderPCatBar(); renderTab(); }
@@ -99,27 +138,183 @@ function renderTab() {
     equipos:       renderEquipos,
     jugadores:     renderJugadores,
     estadisticas:  renderEstadisticas,
+    categorias:    renderCategorias,
+    campeonatos:   renderCampeonatos,
     usuarios:      renderUsuarios,
     backup:        renderBackup,
   };
   (fns[pTab] || (() => {}))();
 }
 
+function noCampMsg() {
+  document.getElementById('pMain').innerHTML = '<p class="empty">Selecciona o crea un campeonato primero.</p>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB: CAMPEONATOS
+// ═══════════════════════════════════════════════════════════════
+async function renderCampeonatos() {
+  document.getElementById('pMain').innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-t" onclick="openCampModal()">+ Nuevo Campeonato</button>
+    </div>
+    ${!allCamps.length ? '<p class="empty">No hay campeonatos creados.</p>'
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+          ${allCamps.map(c => `
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px">${c.nombre}</div>
+                <span class="badge ${c.estado==='activo'?'badge-teal':'badge-orange'}">${c.estado==='activo'?'🟢 Activo':'🔴 Finalizado'}</span>
+              </div>
+              <div style="font-size:12px;color:var(--text);margin-bottom:4px">📅 ${c.año||''}</div>
+              ${c.descripcion ? `<div style="font-size:12px;color:#5a9aaa;margin-bottom:10px">${c.descripcion}</div>` : ''}
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-xs" onclick="openCampModal('${c.id}')">✏️ Editar</button>
+                <button class="btn btn-${c.estado==='activo'?'o':'t'} btn-xs" onclick="toggleCampEstado('${c.id}','${c.estado}')">
+                  ${c.estado==='activo'?'🔴 Finalizar':'🟢 Reactivar'}
+                </button>
+                ${cu.rol==='super' ? `<button class="btn btn-r btn-xs" onclick="deleteCamp('${c.id}')">🗑</button>` : ''}
+              </div>
+            </div>`).join('')}
+         </div>`}`;
+}
+
+async function openCampModal(id = null) {
+  const c = id ? allCamps.find(x => x.id === id) : null;
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-ttl">${c ? 'Editar Campeonato' : 'Nuevo Campeonato'}<button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="fg">
+      <div style="grid-column:1/-1"><label class="fl">Nombre</label>
+        <input id="cNombre" value="${c?.nombre||''}" placeholder="Ej: Apertura 2026"/></div>
+      <div><label class="fl">Año</label>
+        <input type="number" id="cAño" value="${c?.año||new Date().getFullYear()}" min="2020" max="2100"/></div>
+      <div style="grid-column:1/-1"><label class="fl">Descripción (opcional)</label>
+        <input id="cDesc" value="${c?.descripcion||''}" placeholder="Descripción del campeonato"/></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-t" onclick="saveCamp(${id ? `'${id}'` : 'null'})">${c ? 'Guardar' : 'Crear'}</button>
+    </div>`;
+  document.getElementById('modalOv').classList.remove('hidden');
+}
+
+async function saveCamp(id) {
+  const data = {
+    nombre: document.getElementById('cNombre').value.trim(),
+    año:    document.getElementById('cAño').value,
+    descripcion: document.getElementById('cDesc').value.trim(),
+    estado: id ? (allCamps.find(c=>c.id===id)?.estado||'activo') : 'activo',
+  };
+  if (!data.nombre) return showToast('Ingresa el nombre', true);
+  try {
+    if (id) await API.put(`/api/campeonatos/${id}`, data);
+    else    await API.post('/api/campeonatos', data);
+    closeModal();
+    allCamps = await API.get('/api/campeonatos');
+    showToast('✅ Campeonato guardado');
+    renderCampBar();
+    renderCampeonatos();
+  } catch (e) { showToast(e.error||'Error', true); }
+}
+
+async function toggleCampEstado(id, estadoActual) {
+  const nuevo = estadoActual === 'activo' ? 'finalizado' : 'activo';
+  const c = allCamps.find(x => x.id === id);
+  await API.put(`/api/campeonatos/${id}`, { ...c, estado: nuevo });
+  allCamps = await API.get('/api/campeonatos');
+  renderCampBar();
+  renderCampeonatos();
+}
+
+async function deleteCamp(id) {
+  if (!confirm('¿Eliminar campeonato? Se eliminarán sus categorías, equipos, jugadores y partidos.')) return;
+  await API.delete(`/api/campeonatos/${id}`);
+  allCamps = await API.get('/api/campeonatos');
+  if (pCamp === id) { pCamp = allCamps[0]?.id||null; await loadCampData(); }
+  renderCampBar();
+  renderCampeonatos();
+  showToast('Campeonato eliminado');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB: CATEGORIAS
+// ═══════════════════════════════════════════════════════════════
+async function renderCategorias() {
+  if (!pCamp) return noCampMsg();
+  const camp = allCamps.find(c => c.id === pCamp);
+  document.getElementById('pMain').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--teal)">Campeonato: <strong>${camp?.nombre||''}</strong></div>
+      <button class="btn btn-t" onclick="openCatModal()">+ Nueva Categoría</button>
+    </div>
+    ${!cats.length ? '<p class="empty">No hay categorías en este campeonato.</p>'
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+          ${cats.map(c => `
+            <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px">${c.nombre}</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-xs" onclick="openCatModal('${c.id}','${c.nombre}')">✏️</button>
+                <button class="btn btn-r btn-xs" onclick="deleteCat('${c.id}')">🗑</button>
+              </div>
+            </div>`).join('')}
+         </div>`}`;
+}
+
+function openCatModal(id = null, nombre = '') {
+  document.getElementById('modalBox').innerHTML = `
+    <div class="modal-ttl">${id ? 'Editar Categoría' : 'Nueva Categoría'}<button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div style="margin-bottom:16px">
+      <label class="fl">Nombre de la categoría</label>
+      <input id="catNombre" value="${nombre}" placeholder="Ej: Sub-12, Mayores, Femenino"/>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-t" onclick="saveCat(${id ? `'${id}'` : 'null'})">${id ? 'Guardar' : 'Crear'}</button>
+    </div>`;
+  document.getElementById('modalOv').classList.remove('hidden');
+}
+
+async function saveCat(id) {
+  const nombre = document.getElementById('catNombre').value.trim();
+  if (!nombre) return showToast('Ingresa el nombre', true);
+  try {
+    if (id) await API.put(`/api/categorias/${id}`, { nombre });
+    else    await API.post('/api/categorias', { nombre, campeonato_id: pCamp });
+    closeModal();
+    cats = await API.get(`/api/categorias?campeonato_id=${pCamp}`);
+    pCat = cats[0]?.nombre || '';
+    showToast('✅ Categoría guardada');
+    renderPCatBar();
+    renderCategorias();
+  } catch (e) { showToast(e.error||'Error', true); }
+}
+
+async function deleteCat(id) {
+  if (!confirm('¿Eliminar categoría?')) return;
+  await API.delete(`/api/categorias/${id}`);
+  cats = await API.get(`/api/categorias?campeonato_id=${pCamp}`);
+  pCat = cats[0]?.nombre || '';
+  renderPCatBar();
+  renderCategorias();
+  showToast('Categoría eliminada');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // TAB: PARTIDOS
 // ═══════════════════════════════════════════════════════════════
 async function renderPartidos() {
+  if (!pCamp) return noCampMsg();
   const cat = cats.find(c => c.nombre === pCat);
-  const url = cat ? `/api/partidos?categoria_id=${cat.id}` : '/api/partidos';
+  let url = `/api/partidos?campeonato_id=${pCamp}`;
+  if (cat) url += `&categoria_id=${cat.id}`;
   const partidos = await API.get(url).catch(() => []);
   const canAdd = cu.rol !== 'delegado';
 
   document.getElementById('pMain').innerHTML = `
-    ${canAdd ? `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    ${canAdd ? `<div style="display:flex;justify-content:flex-end;margin-bottom:16px">
       <button class="btn btn-t" onclick="openPartidoModal()">+ Programar Partido</button>
     </div>` : ''}
-    ${!partidos.length ? '<p class="empty">No hay partidos programados.</p>' : partidos.map(p => partidoCard(p)).join('')}`;
+    ${!partidos.length ? '<p class="empty">No hay partidos en este campeonato.</p>' : partidos.map(p => partidoCard(p)).join('')}`;
 }
 
 function partidoCard(p) {
@@ -128,7 +323,7 @@ function partidoCard(p) {
   const canSuper = cu.rol === 'super';
   const canAdmin = cu.rol !== 'delegado';
   return `
-    <div class="mc ${isDone ? 'mc-played' : isLive ? 'mc-live' : 'mc-pending'}">
+    <div class="mc ${isDone?'mc-played':isLive?'mc-live':'mc-pending'}">
       <div class="mc-top">
         <div>
           <span class="badge badge-teal">${p.categoria}</span>
@@ -136,8 +331,8 @@ function partidoCard(p) {
           ${isLive ? `<span class="badge badge-live" style="margin-left:6px">🔴 EN VIVO · ${p.minuto}'</span>` : ''}
         </div>
         <div class="mc-actions">
-          ${canAdmin && !isDone ? `<button class="btn btn-t btn-xs" onclick="openResultModal('${p.id}')">✅ Resultado</button>` : ''}
-          ${canAdmin ? `<button class="btn btn-o btn-xs" onclick="toggleVivo('${p.id}',${!isLive})">${isLive ? '⏹ Detener' : '🔴 En Vivo'}</button>` : ''}
+          ${canAdmin&&!isDone ? `<button class="btn btn-t btn-xs" onclick="openResultModal('${p.id}')">✅ Resultado</button>` : ''}
+          ${canAdmin ? `<button class="btn btn-o btn-xs" onclick="toggleVivo('${p.id}',${!isLive})">${isLive?'⏹ Detener':'🔴 En Vivo'}</button>` : ''}
           <button class="btn btn-ghost btn-xs" onclick="openConvPanel('${p.id}')">👥 Convocar</button>
           ${canAdmin ? `<button class="btn btn-ghost btn-xs" onclick="openPartidoModal('${p.id}')">✏️</button>` : ''}
           ${canSuper ? `<button class="btn btn-r btn-xs" onclick="deletePartido('${p.id}')">🗑</button>` : ''}
@@ -156,8 +351,8 @@ function partidoCard(p) {
 
 async function toggleVivo(id, vivo) {
   const minuto = vivo ? (prompt('Minuto actual (ej: 45):', '1') || '1') : '0';
-  await API.post(`/api/partidos/${id}/vivo`, { vivo, minuto: parseInt(minuto) || 0 });
-  showToast(vivo ? '🔴 Partido marcado EN VIVO' : '⏹ Partido fuera de En Vivo');
+  await API.post(`/api/partidos/${id}/vivo`, { vivo, minuto: parseInt(minuto)||0 });
+  showToast(vivo ? '🔴 Partido EN VIVO' : '⏹ Fuera de En Vivo');
   renderPartidos();
 }
 
@@ -167,17 +362,14 @@ async function deletePartido(id) {
   showToast('Partido eliminado'); renderPartidos();
 }
 
-// ── Partido form modal ────────────────────────────
 async function openPartidoModal(id = null) {
   const p = id ? await API.get(`/api/partidos/${id}`) : null;
   const catOptions = cats.map(c => `<option value="${c.id}"${p?.categoria===c.nombre?' selected':''}>${c.nombre}</option>`).join('');
-
   const firstCatId = cats[0]?.id || '';
-  const localEqs   = allEquipos.filter(e => p ? e.categoria === p.categoria : e.categoria_id == firstCatId);
-  const visitaEqs  = localEqs;
+  const localEqs   = allEquipos.filter(e => p ? e.categoria===p.categoria : e.categoria_id===firstCatId);
 
   document.getElementById('modalBox').innerHTML = `
-    <div class="modal-ttl">${p ? 'Editar Partido' : 'Programar Partido'}<button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-ttl">${p?'Editar Partido':'Programar Partido'}<button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="fg">
       <div><label class="fl">Fecha</label><input type="date" id="mFecha" value="${p?.fecha||''}"/></div>
       <div><label class="fl">Hora</label><input type="time" id="mHora" value="${p?.hora||''}"/></div>
@@ -187,23 +379,24 @@ async function openPartidoModal(id = null) {
     </div>
     <div class="fg">
       <div><label class="fl">Equipo Local</label>
-        <select id="mLocal">${localEqs.map(e => `<option value="${e.id}"${p?.equipo_local_id==e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
+        <select id="mLocal">${localEqs.map(e=>`<option value="${e.id}"${p?.equipo_local_id===e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
       </div>
       <div><label class="fl">Equipo Visitante</label>
-        <select id="mVisita">${visitaEqs.map(e => `<option value="${e.id}"${p?.equipo_visitante_id==e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
+        <select id="mVisita">${localEqs.map(e=>`<option value="${e.id}"${p?.equipo_visitante_id===e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
       </div>
     </div>
-    <div style="margin-bottom:12px"><label class="fl">Notas / Cancha</label><input type="text" id="mNotas" placeholder="Ej: Cancha Municipal" value="${p?.notas||''}"/></div>
+    <div style="margin-bottom:12px"><label class="fl">Notas / Cancha</label>
+      <input type="text" id="mNotas" placeholder="Ej: Cancha Municipal" value="${p?.notas||''}"/></div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-t" onclick="savePartido(${id ? `'${id}'` : 'null'})">${p ? 'Guardar' : 'Programar'}</button>
+      <button class="btn btn-t" onclick="savePartido(${id?`'${id}'`:'null'})">${p?'Guardar':'Programar'}</button>
     </div>`;
   document.getElementById('modalOv').classList.remove('hidden');
 }
 
 function updateEquipoSelects() {
   const catId = document.getElementById('mCat')?.value;
-  const eqs = allEquipos.filter(e => e.categoria_id == catId);
+  const eqs = allEquipos.filter(e => e.categoria_id === catId);
   const opts = eqs.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
   document.getElementById('mLocal').innerHTML  = opts;
   document.getElementById('mVisita').innerHTML = opts;
@@ -214,21 +407,20 @@ async function savePartido(id) {
     fecha:               document.getElementById('mFecha').value,
     hora:                document.getElementById('mHora').value,
     categoria_id:        document.getElementById('mCat').value,
+    campeonato_id:       pCamp,
     equipo_local_id:     document.getElementById('mLocal').value,
     equipo_visitante_id: document.getElementById('mVisita').value,
     notas:               document.getElementById('mNotas').value,
   };
-  if (!data.fecha || !data.equipo_local_id || !data.equipo_visitante_id) {
+  if (!data.fecha||!data.equipo_local_id||!data.equipo_visitante_id)
     return showToast('Completa fecha y equipos', true);
-  }
-  if (data.equipo_local_id === data.equipo_visitante_id) {
+  if (data.equipo_local_id===data.equipo_visitante_id)
     return showToast('Los equipos no pueden ser el mismo', true);
-  }
   try {
     if (id) await API.put(`/api/partidos/${id}`, data);
     else    await API.post('/api/partidos', data);
     closeModal(); showToast('✅ Partido guardado'); renderPartidos();
-  } catch (e) { showToast(e.error || 'Error', true); }
+  } catch (e) { showToast(e.error||'Error', true); }
 }
 
 // ── Resultado modal ───────────────────────────────
@@ -236,10 +428,8 @@ let _resultPartido = null;
 async function openResultModal(id) {
   const p = await API.get(`/api/partidos/${id}`);
   _resultPartido = p;
-  const jugadores = await API.get(`/api/jugadores?categoria_id=${cats.find(c=>c.nombre===p.categoria)?.id||''}`);
-  const localJugs  = jugadores.filter(j => j.equipo_nombre === p.local_nombre);
-  const visitaJugs = jugadores.filter(j => j.equipo_nombre === p.visita_nombre);
-  const allJugs    = [...localJugs, ...visitaJugs];
+  const jugadores = await API.get(`/api/jugadores?campeonato_id=${pCamp}`);
+  const allJugs = jugadores.filter(j => j.equipo_nombre===p.local_nombre||j.equipo_nombre===p.visita_nombre);
 
   document.getElementById('resultModal').innerHTML = `
     <div class="modal-ttl">Cargar Resultado<button class="modal-close" onclick="closeResultModal()">✕</button></div>
@@ -250,7 +440,6 @@ async function openResultModal(id) {
       <input class="rm-score-input" type="number" id="rGV" min="0" value="${p.goles_visitante??0}"/>
       <div class="rm-team-label">${p.visita_nombre}</div>
     </div>
-
     <div class="rm-section">
       <div class="rm-section-title">⚽ Goles (opcional)</div>
       <div id="golesList" class="rm-list"></div>
@@ -263,7 +452,6 @@ async function openResultModal(id) {
         <div></div>
       </div>
     </div>
-
     <div class="rm-section">
       <div class="rm-section-title">🟨 Tarjetas (opcional)</div>
       <div id="tarjetasList" class="rm-list"></div>
@@ -278,26 +466,24 @@ async function openResultModal(id) {
         <div></div>
       </div>
     </div>
-
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeResultModal()">Cancelar</button>
       <button class="btn btn-t" onclick="saveResultado()">💾 Guardar Resultado</button>
     </div>`;
   document.getElementById('resultOv').classList.remove('hidden');
-
-  window._golesTemp    = (p.goles || []).map(g => ({ jugador_id: g.jugador_id, nombre: g.jugador_nombre, equipo: g.equipo_nombre, minuto: g.minuto }));
-  window._tarjetasTemp = (p.tarjetas || []).map(t => ({ jugador_id: t.jugador_id, nombre: t.jugador_nombre, equipo: t.equipo_nombre, tipo: t.tipo, minuto: t.minuto }));
+  window._golesTemp    = (p.goles||[]).map(g=>({jugador_id:g.jugador_id,nombre:g.jugador_nombre,equipo:g.equipo_nombre,minuto:g.minuto}));
+  window._tarjetasTemp = (p.tarjetas||[]).map(t=>({jugador_id:t.jugador_id,nombre:t.jugador_nombre,equipo:t.equipo_nombre,tipo:t.tipo,minuto:t.minuto}));
   renderGolesTemp(); renderTarjetasTemp();
 }
 
 function renderGolesTemp() {
   document.getElementById('golesList').innerHTML = !window._golesTemp.length
     ? '<p class="empty" style="padding:8px 0">Sin goles registrados</p>'
-    : window._golesTemp.map((g, i) => `
+    : window._golesTemp.map((g,i)=>`
         <div class="rm-item">
           <span class="rm-item-name">⚽ ${g.nombre} <span style="color:#5a9aaa">(${g.equipo})</span></span>
           <div style="display:flex;align-items:center;gap:8px">
-            ${g.minuto ? `<span style="color:var(--teal);font-size:12px">${g.minuto}'</span>` : ''}
+            ${g.minuto?`<span style="color:var(--teal);font-size:12px">${g.minuto}'</span>`:''}
             <button class="btn btn-r btn-xs" onclick="removeGol(${i})">✕</button>
           </div>
         </div>`).join('');
@@ -305,11 +491,11 @@ function renderGolesTemp() {
 function renderTarjetasTemp() {
   document.getElementById('tarjetasList').innerHTML = !window._tarjetasTemp.length
     ? '<p class="empty" style="padding:8px 0">Sin tarjetas registradas</p>'
-    : window._tarjetasTemp.map((t, i) => `
+    : window._tarjetasTemp.map((t,i)=>`
         <div class="rm-item">
           <span class="rm-item-name">${t.tipo==='amarilla'?'🟨':'🟥'} ${t.nombre} <span style="color:#5a9aaa">(${t.equipo})</span></span>
           <div style="display:flex;align-items:center;gap:8px">
-            ${t.minuto ? `<span style="color:var(--teal);font-size:12px">${t.minuto}'</span>` : ''}
+            ${t.minuto?`<span style="color:var(--teal);font-size:12px">${t.minuto}'</span>`:''}
             <button class="btn btn-r btn-xs" onclick="removeTarjeta(${i})">✕</button>
           </div>
         </div>`).join('');
@@ -319,59 +505,56 @@ function addGol() {
   const jugadorId = document.getElementById('gJugador').value;
   const select    = document.getElementById('gJugador');
   const nombre    = select.options[select.selectedIndex].text;
-  const minuto    = parseInt(document.getElementById('gMin').value) || null;
-  window._golesTemp.push({ jugador_id: jugadorId, nombre: nombre.split(') ')[1], equipo: nombre.split('(')[1]?.split(')')[0], minuto });
+  const minuto    = parseInt(document.getElementById('gMin').value)||null;
+  window._golesTemp.push({jugador_id:jugadorId,nombre:nombre.split(') ')[1],equipo:nombre.split('(')[1]?.split(')')[0],minuto});
   renderGolesTemp();
 }
-function removeGol(i) { window._golesTemp.splice(i, 1); renderGolesTemp(); }
+function removeGol(i) { window._golesTemp.splice(i,1); renderGolesTemp(); }
 
 function addTarjeta() {
   const jugadorId = document.getElementById('tJugador').value;
   const select    = document.getElementById('tJugador');
   const nombre    = select.options[select.selectedIndex].text;
   const tipo      = document.getElementById('tTipo').value;
-  window._tarjetasTemp.push({ jugador_id: jugadorId, nombre: nombre.split(') ')[1], equipo: nombre.split('(')[1]?.split(')')[0], tipo });
+  window._tarjetasTemp.push({jugador_id:jugadorId,nombre:nombre.split(') ')[1],equipo:nombre.split('(')[1]?.split(')')[0],tipo});
   renderTarjetasTemp();
 }
-function removeTarjeta(i) { window._tarjetasTemp.splice(i, 1); renderTarjetasTemp(); }
+function removeTarjeta(i) { window._tarjetasTemp.splice(i,1); renderTarjetasTemp(); }
 
 async function saveResultado() {
-  const goles_local     = parseInt(document.getElementById('rGL').value) || 0;
-  const goles_visitante = parseInt(document.getElementById('rGV').value) || 0;
+  const goles_local     = parseInt(document.getElementById('rGL').value)||0;
+  const goles_visitante = parseInt(document.getElementById('rGV').value)||0;
   try {
     await API.post(`/api/partidos/${_resultPartido.id}/resultado`, {
-      goles_local, goles_visitante,
-      goles:    window._golesTemp,
-      tarjetas: window._tarjetasTemp,
+      goles_local, goles_visitante, goles:window._golesTemp, tarjetas:window._tarjetasTemp,
     });
     closeResultModal(); showToast('✅ Resultado guardado'); renderPartidos();
-  } catch (e) { showToast(e.error || 'Error', true); }
+  } catch (e) { showToast(e.error||'Error', true); }
 }
-
 function closeResultModal() { document.getElementById('resultOv').classList.add('hidden'); }
 
 // ═══════════════════════════════════════════════════════════════
 // TAB: CONVOCATORIAS
 // ═══════════════════════════════════════════════════════════════
 async function renderConvocatorias() {
+  if (!pCamp) return noCampMsg();
   const cat = cats.find(c => c.nombre === pCat);
-  const url = cat ? `/api/partidos?categoria_id=${cat.id}` : '/api/partidos';
-  const partidos = await API.get(url).catch(() => []);
-  const pendientes = partidos.filter(p => p.estado === 'programado' || p.estado === 'en_vivo');
+  let url = `/api/partidos?campeonato_id=${pCamp}`;
+  if (cat) url += `&categoria_id=${cat.id}`;
+  const partidos = await API.get(url).catch(()=>[]);
+  const pendientes = partidos.filter(p => p.estado==='programado'||p.estado==='en_vivo');
 
   document.getElementById('pMain').innerHTML = !pendientes.length
     ? '<p class="empty">No hay partidos próximos en esta categoría.</p>'
-    : `<div style="margin-bottom:12px;color:var(--text);font-size:13px">
-         Selecciona un partido para gestionar la convocatoria de cada equipo.
-       </div>
-       ${pendientes.map(p => `
+    : `<div style="margin-bottom:12px;color:var(--text);font-size:13px">Selecciona un partido para gestionar la convocatoria.</div>
+       ${pendientes.map(p=>`
         <div class="mc mc-pending" style="margin-bottom:10px">
           <div class="mc-top">
             <div>
               <span class="badge badge-teal">${p.categoria}</span>
               <span class="mc-meta" style="margin-left:8px">${fmt(p.fecha)}${p.hora?' · '+p.hora:''}</span>
             </div>
-            <button class="btn btn-t btn-sm" onclick="openConvPanel('${p.id}')">👥 Gestionar Convocatoria</button>
+            <button class="btn btn-t btn-sm" onclick="openConvPanel('${p.id}')">👥 Gestionar</button>
           </div>
           <div class="mc-teams">
             <span class="mc-team">${p.local_nombre}</span>
@@ -381,7 +564,6 @@ async function renderConvocatorias() {
         </div>`).join('')}`;
 }
 
-// ── Convocatoria panel ────────────────────────────
 async function openConvPanel(partidoId) {
   document.getElementById('convOv').classList.remove('hidden');
   document.getElementById('convModal').innerHTML = '<p class="empty" style="padding:30px">Cargando...</p>';
@@ -395,9 +577,7 @@ async function openConvPanel(partidoId) {
     { id: partido.equipo_local_id,     nombre: partido.local_nombre },
     { id: partido.equipo_visitante_id, nombre: partido.visita_nombre },
   ];
-  if (cu.rol === 'delegado') {
-    teamsToManage = teamsToManage.filter(t => t.id === cu.equipo_id);
-  }
+  if (cu.rol === 'delegado') teamsToManage = teamsToManage.filter(t => t.id === cu.equipo_id);
 
   let html = `
     <div class="modal-ttl" style="flex-direction:column;align-items:flex-start;gap:8px">
@@ -410,7 +590,7 @@ async function openConvPanel(partidoId) {
 
   for (const team of teamsToManage) {
     const jugadores = await API.get(`/api/jugadores?equipo_id=${team.id}`);
-    const convIds   = convocados.filter(c => c.equipo_id === team.id).map(c => c.jugador_id);
+    const convIds   = convocados.filter(c => c.equipo_id===team.id).map(c => c.jugador_id);
 
     html += `
       <div style="margin-bottom:22px">
@@ -420,7 +600,7 @@ async function openConvPanel(partidoId) {
           <span style="font-size:12px;color:var(--teal);font-family:'Nunito',sans-serif;letter-spacing:0;margin-left:8px">${convIds.length} convocados</span>
         </div>
         ${!jugadores.length
-          ? `<p class="empty">Sin jugadores registrados. <a class="text-teal" href="/panel.html#jugadores">Agregar jugadores →</a></p>`
+          ? `<p class="empty">Sin jugadores registrados.</p>`
           : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
                ${jugadores.map(j => {
                  const sel = convIds.includes(j.id);
@@ -428,16 +608,15 @@ async function openConvPanel(partidoId) {
                    <div onclick="toggleConv('${partidoId}','${j.id}','${team.id}',${sel},this)"
                         style="background:${sel?'rgba(0,212,170,.12)':'rgba(0,30,50,.5)'};
                                border:1.5px solid ${sel?'var(--teal)':'var(--border)'};
-                               border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:all .15s;"
-                        title="Clic para ${sel?'quitar de':'agregar a'} la convocatoria">
+                               border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:all .15s;">
                      <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--teal3);
                                  display:flex;align-items:center;justify-content:center;margin:0 auto 7px;font-size:20px">
                        ${playerAvatar(j.foto)}
                      </div>
-                     <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--orange)">${j.numero ?? '—'}</div>
+                     <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--orange)">${j.numero??'—'}</div>
                      <div style="font-weight:800;font-size:11px;color:var(--white);line-height:1.2">${j.nombre}</div>
                      <div style="font-size:10px;color:${POS_COLOR[j.posicion]||'var(--teal)'}">${POS_ICON[j.posicion]||''} ${j.posicion||''}</div>
-                     ${sel ? `<div style="color:var(--teal);font-size:10px;font-weight:800;margin-top:4px">✓ CONVOCADO</div>` : ''}
+                     ${sel?`<div style="color:var(--teal);font-size:10px;font-weight:800;margin-top:4px">✓ CONVOCADO</div>`:''}
                    </div>`;
                }).join('')}
              </div>`}
@@ -452,35 +631,32 @@ async function toggleConv(partidoId, jugadorId, equipoId, currentlySelected, el)
   try {
     if (currentlySelected) {
       await API.delete(`/api/partidos/${partidoId}/convocatoria/${jugadorId}`);
-      showToast('Jugador quitado de la convocatoria');
+      showToast('Jugador quitado');
     } else {
-      await API.post(`/api/partidos/${partidoId}/convocatoria`, { jugador_id: jugadorId, equipo_id: equipoId });
+      await API.post(`/api/partidos/${partidoId}/convocatoria`, { jugador_id:jugadorId, equipo_id:equipoId });
       showToast('✅ Jugador convocado');
     }
     openConvPanel(partidoId);
-  } catch (e) { showToast(e.error || 'Error', true); }
+  } catch (e) { showToast(e.error||'Error', true); }
 }
-
 function closeConvOv() { document.getElementById('convOv').classList.add('hidden'); }
 
 // ═══════════════════════════════════════════════════════════════
 // TAB: EQUIPOS
 // ═══════════════════════════════════════════════════════════════
 async function renderEquipos() {
+  if (!pCamp) return noCampMsg();
   const cat = cats.find(c => c.nombre === pCat);
-  const equipos = cat
-    ? await API.get(`/api/equipos?categoria_id=${cat.id}`)
-    : allEquipos;
+  const equipos = cat ? allEquipos.filter(e => e.categoria_id===cat.id) : allEquipos;
   const canAdd = cu.rol !== 'delegado';
 
   document.getElementById('pMain').innerHTML = `
-    ${canAdd ? `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    ${canAdd ? `<div style="display:flex;justify-content:flex-end;margin-bottom:16px">
       <button class="btn btn-t" onclick="openEquipoModal()">+ Nuevo Equipo</button>
     </div>` : ''}
     ${!equipos.length ? '<p class="empty">No hay equipos en esta categoría.</p>'
       : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
-          ${equipos.map(e => `
+          ${equipos.map(e=>`
             <div class="card" style="display:flex;flex-direction:column;gap:12px">
               <div style="display:flex;align-items:center;gap:12px">
                 <div style="width:52px;height:52px;border-radius:50%;overflow:hidden;background:var(--teal3);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">
@@ -491,15 +667,14 @@ async function renderEquipos() {
                   <div style="font-size:11px;color:var(--teal)">${e.categoria}</div>
                 </div>
               </div>
-              ${canAdd ? `
+              ${canAdd?`
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <button class="btn btn-ghost btn-xs" onclick="openEquipoModal('${e.id}')">✏️ Editar</button>
-                <label class="btn btn-o btn-xs" style="cursor:pointer">
-                  🖼 Escudo
+                <label class="btn btn-o btn-xs" style="cursor:pointer">🖼 Escudo
                   <input type="file" accept="image/*" style="display:none" onchange="uploadEscudo('${e.id}',this)"/>
                 </label>
                 ${cu.rol==='super'?`<button class="btn btn-r btn-xs" onclick="deleteEquipo('${e.id}')">🗑</button>`:''}
-              </div>` : ''}
+              </div>`:''}
             </div>`).join('')}
          </div>`}`;
 }
@@ -507,36 +682,37 @@ async function renderEquipos() {
 async function openEquipoModal(id = null) {
   const e = id ? await API.get(`/api/equipos/${id}`) : null;
   document.getElementById('modalBox').innerHTML = `
-    <div class="modal-ttl">${e ? 'Editar Equipo' : 'Nuevo Equipo'}<button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-ttl">${e?'Editar Equipo':'Nuevo Equipo'}<button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="fg">
-      <div style="grid-column:1/-1"><label class="fl">Nombre del Equipo</label><input id="eNombre" type="text" value="${e?.nombre||''}" placeholder="Nombre del equipo"/></div>
+      <div style="grid-column:1/-1"><label class="fl">Nombre del Equipo</label>
+        <input id="eNombre" type="text" value="${e?.nombre||''}" placeholder="Nombre del equipo"/></div>
       <div><label class="fl">Categoría</label>
         <select id="eCat">${cats.map(c=>`<option value="${c.id}"${e?.categoria===c.nombre?' selected':''}>${c.nombre}</option>`).join('')}</select>
       </div>
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-t" onclick="saveEquipo(${id ? `'${id}'` : 'null'})">${e ? 'Guardar' : 'Crear'}</button>
+      <button class="btn btn-t" onclick="saveEquipo(${id?`'${id}'`:'null'})">${e?'Guardar':'Crear'}</button>
     </div>`;
   document.getElementById('modalOv').classList.remove('hidden');
 }
 
 async function saveEquipo(id) {
-  const data = { nombre: document.getElementById('eNombre').value.trim(), categoria_id: document.getElementById('eCat').value };
+  const data = { nombre:document.getElementById('eNombre').value.trim(), categoria_id:document.getElementById('eCat').value, campeonato_id:pCamp };
   if (!data.nombre) return showToast('Ingresa el nombre del equipo', true);
   try {
     if (id) await API.put(`/api/equipos/${id}`, data);
     else    await API.post('/api/equipos', data);
     closeModal();
-    allEquipos = await API.get('/api/equipos');
+    allEquipos = await API.get(`/api/equipos?campeonato_id=${pCamp}`);
     showToast('✅ Equipo guardado'); renderEquipos();
-  } catch (e) { showToast(e.error || 'Error', true); }
+  } catch (e) { showToast(e.error||'Error', true); }
 }
 
 async function deleteEquipo(id) {
   if (!confirm('¿Eliminar equipo? Se eliminarán sus jugadores también.')) return;
   await API.delete(`/api/equipos/${id}`);
-  allEquipos = await API.get('/api/equipos');
+  allEquipos = await API.get(`/api/equipos?campeonato_id=${pCamp}`);
   showToast('Equipo eliminado'); renderEquipos();
 }
 
@@ -544,23 +720,23 @@ async function uploadEscudo(id, input) {
   const fd = new FormData(); fd.append('imagen', input.files[0]);
   try {
     await API.upload(`/api/equipos/${id}/escudo`, fd);
-    allEquipos = await API.get('/api/equipos');
+    allEquipos = await API.get(`/api/equipos?campeonato_id=${pCamp}`);
     showToast('✅ Escudo actualizado'); renderEquipos();
-  } catch (e) { showToast(e.error || 'Error al subir imagen', true); }
+  } catch (e) { showToast(e.error||'Error al subir imagen', true); }
 }
 
 // ═══════════════════════════════════════════════════════════════
 // TAB: JUGADORES
 // ═══════════════════════════════════════════════════════════════
 async function renderJugadores() {
-  const cat = cats.find(c => c.nombre === pCat);
-  let url = '/api/jugadores';
-  if (cu.rol === 'delegado' && cu.equipo_id) {
-    url = `/api/jugadores?equipo_id=${cu.equipo_id}`;
-  } else if (cat) {
-    url += `?categoria_id=${cat.id}`;
+  if (!pCamp) return noCampMsg();
+  let url = `/api/jugadores?campeonato_id=${pCamp}`;
+  if (cu.rol === 'delegado' && cu.equipo_id) url = `/api/jugadores?equipo_id=${cu.equipo_id}`;
+  else {
+    const cat = cats.find(c => c.nombre === pCat);
+    if (cat) url = `/api/jugadores?campeonato_id=${pCamp}&categoria_id=${cat.id}`;
   }
-  const jugadores = await API.get(url).catch(() => []);
+  const jugadores = await API.get(url).catch(()=>[]);
 
   document.getElementById('pMain').innerHTML = `
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
@@ -568,23 +744,22 @@ async function renderJugadores() {
     </div>
     ${!jugadores.length ? '<p class="empty">No hay jugadores en esta selección.</p>'
       : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-          ${jugadores.map(j => `
+          ${jugadores.map(j=>`
             <div class="card" style="padding:16px;text-align:center">
               <div style="width:60px;height:60px;border-radius:50%;overflow:hidden;background:var(--teal3);
                           display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:28px">
                 ${playerAvatar(j.foto)}
               </div>
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--orange)">${j.numero ?? '—'}</div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--orange)">${j.numero??'—'}</div>
               <div style="font-weight:800;font-size:13px;margin-bottom:3px">${j.nombre}</div>
               <div style="font-size:11px;color:${POS_COLOR[j.posicion]||'var(--teal)'};margin-bottom:3px">${POS_ICON[j.posicion]||'⚽'} ${j.posicion||''}</div>
               <div style="font-size:11px;color:#5a9aaa;margin-bottom:10px">${j.equipo_nombre}${j.edad?' · '+j.edad+' años':''}</div>
               <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
                 <button class="btn btn-ghost btn-xs" onclick="openJugadorModal('${j.id}')">✏️</button>
-                <label class="btn btn-o btn-xs" style="cursor:pointer" title="Subir foto">
-                  📷
+                <label class="btn btn-o btn-xs" style="cursor:pointer" title="Subir foto">📷
                   <input type="file" accept="image/*" style="display:none" onchange="uploadFoto('${j.id}',this)"/>
                 </label>
-                ${(cu.rol==='super'||cu.rol==='admin') ? `<button class="btn btn-r btn-xs" onclick="deleteJugador('${j.id}')">🗑</button>` : ''}
+                ${(cu.rol==='super'||cu.rol==='admin')?`<button class="btn btn-r btn-xs" onclick="deleteJugador('${j.id}')">🗑</button>`:''}
               </div>
             </div>`).join('')}
          </div>`}`;
@@ -597,19 +772,18 @@ async function openJugadorModal(id = null) {
     const eq = allEquipos.find(e => e.id === cu.equipo_id);
     eqOptions = eq ? `<option value="${eq.id}">${eq.nombre}</option>` : '';
   } else {
-    const catId = cats.find(c => c.nombre === pCat)?.id;
-    const eqs   = catId ? allEquipos.filter(e => e.categoria_id == catId) : allEquipos;
-    eqOptions = eqs.map(e => `<option value="${e.id}"${j?.equipo_id==e.id?' selected':''}>${e.nombre} (${e.categoria})</option>`).join('');
+    const cat = cats.find(c => c.nombre === pCat);
+    const eqs = cat ? allEquipos.filter(e => e.categoria_id===cat.id) : allEquipos;
+    eqOptions = eqs.map(e=>`<option value="${e.id}"${j?.equipo_id===e.id?' selected':''}>${e.nombre} (${e.categoria})</option>`).join('');
   }
 
   document.getElementById('modalBox').innerHTML = `
-    <div class="modal-ttl">${j ? 'Editar Jugador' : 'Nuevo Jugador'}<button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-ttl">${j?'Editar Jugador':'Nuevo Jugador'}<button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="fg">
-      <div style="grid-column:1/-1"><label class="fl">Nombre Completo</label><input id="jNombre" value="${j?.nombre||''}" placeholder="Nombre del jugador"/></div>
+      <div style="grid-column:1/-1"><label class="fl">Nombre Completo</label>
+        <input id="jNombre" value="${j?.nombre||''}" placeholder="Nombre del jugador"/></div>
       <div><label class="fl">Posición</label>
-        <select id="jPos">
-          ${['Portero','Defensa','Mediocampista','Delantero'].map(p=>`<option${j?.posicion===p?' selected':''}>${p}</option>`).join('')}
-        </select>
+        <select id="jPos">${['Portero','Defensa','Mediocampista','Delantero'].map(p=>`<option${j?.posicion===p?' selected':''}>${p}</option>`).join('')}</select>
       </div>
       <div><label class="fl">Número</label><input type="number" id="jNum" min="1" max="99" value="${j?.numero||''}" placeholder="10"/></div>
       <div><label class="fl">Edad</label><input type="number" id="jEdad" min="8" max="60" value="${j?.edad||''}" placeholder="20"/></div>
@@ -617,7 +791,7 @@ async function openJugadorModal(id = null) {
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-t" onclick="saveJugador(${id ? `'${id}'` : 'null'})">${j ? 'Guardar' : 'Agregar'}</button>
+      <button class="btn btn-t" onclick="saveJugador(${id?`'${id}'`:'null'})">${j?'Guardar':'Agregar'}</button>
     </div>`;
   document.getElementById('modalOv').classList.remove('hidden');
 }
@@ -626,8 +800,8 @@ async function saveJugador(id) {
   const data = {
     nombre:    document.getElementById('jNombre').value.trim(),
     posicion:  document.getElementById('jPos').value,
-    numero:    document.getElementById('jNum').value || null,
-    edad:      document.getElementById('jEdad').value || null,
+    numero:    document.getElementById('jNum').value||null,
+    edad:      document.getElementById('jEdad').value||null,
     equipo_id: document.getElementById('jEquipo').value,
   };
   if (!data.nombre) return showToast('Ingresa el nombre del jugador', true);
@@ -635,7 +809,7 @@ async function saveJugador(id) {
     if (id) await API.put(`/api/jugadores/${id}`, data);
     else    await API.post('/api/jugadores', data);
     closeModal(); showToast('✅ Jugador guardado'); renderJugadores();
-  } catch (e) { showToast(e.error || 'Error', true); }
+  } catch (e) { showToast(e.error||'Error', true); }
 }
 
 async function deleteJugador(id) {
@@ -649,18 +823,19 @@ async function uploadFoto(id, input) {
   try {
     await API.upload(`/api/jugadores/${id}/foto`, fd);
     showToast('✅ Foto actualizada'); renderJugadores();
-  } catch (e) { showToast(e.error || 'Error al subir foto', true); }
+  } catch (e) { showToast(e.error||'Error al subir foto', true); }
 }
 
 // ═══════════════════════════════════════════════════════════════
 // TAB: ESTADÍSTICAS
 // ═══════════════════════════════════════════════════════════════
 async function renderEstadisticas() {
+  if (!pCamp) return noCampMsg();
   const cat = cats.find(c => c.nombre === pCat);
   const [standings, goles, tarjetas] = await Promise.all([
-    cat ? API.get(`/api/standings?categoria_id=${cat.id}`) : Promise.resolve([]),
-    API.get(`/api/goleadores${cat?'?categoria_id='+cat.id:''}`),
-    API.get(`/api/tarjetas${cat?'?categoria_id='+cat.id:''}`),
+    cat ? API.get(`/api/standings?campeonato_id=${pCamp}&categoria_id=${cat.id}`) : Promise.resolve([]),
+    API.get(`/api/goleadores?campeonato_id=${pCamp}${cat?'&categoria_id='+cat.id:''}`),
+    API.get(`/api/tarjetas?campeonato_id=${pCamp}${cat?'&categoria_id='+cat.id:''}`),
   ]);
 
   document.getElementById('pMain').innerHTML = `
@@ -700,31 +875,26 @@ async function renderEstadisticas() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TAB: USUARIOS (solo super)
+// TAB: USUARIOS
 // ═══════════════════════════════════════════════════════════════
 async function renderUsuarios() {
-  const usuarios = await API.get('/api/usuarios').catch(() => []);
+  const usuarios = await API.get('/api/usuarios').catch(()=>[]);
   document.getElementById('pMain').innerHTML = `
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
       <button class="btn btn-t" onclick="openUserModal()">+ Nuevo Usuario</button>
     </div>
-    <div class="u-grid">${usuarios.map(u => `
+    <div class="u-grid">${usuarios.map(u=>`
       <div class="u-card">
         <div class="u-top">
-          <div class="u-av ${u.rol}">
-            ${u.rol==='super'?'👑':u.rol==='admin'?'⚙️':'🏅'}
-          </div>
-          <div>
-            <div class="u-name">${u.nombre}</div>
-            <div class="u-user">@${u.usuario}</div>
-          </div>
+          <div class="u-av ${u.rol}">${u.rol==='super'?'👑':u.rol==='admin'?'⚙️':'🏅'}</div>
+          <div><div class="u-name">${u.nombre}</div><div class="u-user">@${u.usuario}</div></div>
         </div>
         <span class="badge ${u.rol==='super'?'badge-gold':u.rol==='admin'?'badge-orange':'badge-teal'}">${u.rol}</span>
-        ${u.equipo_nombre ? `<div class="u-info">🛡️ ${u.equipo_nombre}</div>` : ''}
+        ${u.equipo_nombre?`<div class="u-info">🛡️ ${u.equipo_nombre}</div>`:''}
         <div class="divider"></div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-xs" onclick="openUserModal('${u.id}')">✏️ Editar</button>
-          ${u.id !== cu.id ? `<button class="btn btn-r btn-xs" onclick="deleteUser('${u.id}')">🗑</button>` : ''}
+          ${u.id!==cu.id?`<button class="btn btn-r btn-xs" onclick="deleteUser('${u.id}')">🗑</button>`:''}
         </div>
       </div>`).join('')}
     </div>`;
@@ -732,15 +902,15 @@ async function renderUsuarios() {
 
 async function openUserModal(id = null) {
   const allUsers = id ? await API.get('/api/usuarios').catch(()=>[]) : [];
-  const u = id ? allUsers.find(x => x.id === id) : null;
-  const eqOptions = allEquipos.map(e => `<option value="${e.id}"${u?.equipo_id==e.id?' selected':''}>${e.nombre} (${e.categoria})</option>`).join('');
+  const u = id ? allUsers.find(x => x.id===id) : null;
+  const eqOptions = allEquipos.map(e=>`<option value="${e.id}"${u?.equipo_id===e.id?' selected':''}>${e.nombre} (${e.categoria})</option>`).join('');
 
   document.getElementById('modalBox').innerHTML = `
-    <div class="modal-ttl">${u ? 'Editar Usuario' : 'Nuevo Usuario'}<button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-ttl">${u?'Editar Usuario':'Nuevo Usuario'}<button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="fg">
       <div><label class="fl">Nombre</label><input id="uNombre" value="${u?.nombre||''}" placeholder="Nombre completo"/></div>
       <div><label class="fl">Usuario</label><input id="uUsuario" value="${u?.usuario||''}" placeholder="usuario123"/></div>
-      <div><label class="fl">Contraseña ${u?'(dejar vacío = no cambiar)':''}</label><input type="password" id="uPass" placeholder="••••••••"/></div>
+      <div><label class="fl">Contraseña ${u?'(vacío = no cambiar)':''}</label><input type="password" id="uPass" placeholder="••••••••"/></div>
       <div><label class="fl">Rol</label>
         <select id="uRol" onchange="toggleEquipoField()">
           <option${u?.rol==='super'?' selected':''}>super</option>
@@ -755,31 +925,31 @@ async function openUserModal(id = null) {
     </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-t" onclick="saveUser(${id ? `'${id}'` : 'null'})">${u ? 'Guardar' : 'Crear'}</button>
+      <button class="btn btn-t" onclick="saveUser(${id?`'${id}'`:'null'})">${u?'Guardar':'Crear'}</button>
     </div>`;
   document.getElementById('modalOv').classList.remove('hidden');
 }
 
 function toggleEquipoField() {
-  const show = document.getElementById('uRol')?.value === 'delegado';
-  document.getElementById('uEquipoField').style.display = show ? '' : 'none';
+  document.getElementById('uEquipoField').style.display =
+    document.getElementById('uRol')?.value==='delegado' ? '' : 'none';
 }
 
 async function saveUser(id) {
   const data = {
     nombre:    document.getElementById('uNombre').value.trim(),
     usuario:   document.getElementById('uUsuario').value.trim(),
-    password:  document.getElementById('uPass').value || undefined,
+    password:  document.getElementById('uPass').value||undefined,
     rol:       document.getElementById('uRol').value,
-    equipo_id: document.getElementById('uEquipo')?.value || null,
+    equipo_id: document.getElementById('uEquipo')?.value||null,
   };
-  if (!data.nombre || !data.usuario) return showToast('Completa nombre y usuario', true);
-  if (!id && !data.password) return showToast('La contraseña es requerida para usuario nuevo', true);
+  if (!data.nombre||!data.usuario) return showToast('Completa nombre y usuario', true);
+  if (!id&&!data.password) return showToast('La contraseña es requerida', true);
   try {
     if (id) await API.put(`/api/usuarios/${id}`, data);
     else    await API.post('/api/usuarios', data);
     closeModal(); showToast('✅ Usuario guardado'); renderUsuarios();
-  } catch (e) { showToast(e.error || 'Error', true); }
+  } catch (e) { showToast(e.error||'Error', true); }
 }
 
 async function deleteUser(id) {
@@ -797,33 +967,29 @@ function renderBackup() {
       <div class="backup-card">
         <div class="backup-icon">📄</div>
         <div class="backup-title">Exportar JSON</div>
-        <div class="backup-desc">Exporta todos los datos en formato JSON. Útil para respaldar o migrar datos.</div>
+        <div class="backup-desc">Exporta todos los campeonatos, equipos, jugadores y partidos en formato JSON.</div>
         <a class="btn btn-t btn-full" href="/api/backup/json" download>⬇️ Exportar JSON</a>
       </div>
       <div class="backup-card">
         <div class="backup-icon">☁️</div>
         <div class="backup-title">Firebase Storage</div>
-        <div class="backup-desc">Las fotos de jugadores y escudos se almacenan en Firebase Storage de forma automática y segura.</div>
-        <div style="background:var(--glass2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--text);text-align:left;margin-top:8px">
-          ☁️ Almacenamiento en la nube<br/>
-          🔒 Acceso seguro con Firebase Admin
+        <div class="backup-desc">Las fotos y escudos están en Firebase Storage de forma automática y segura.</div>
+        <div style="background:var(--glass2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--text);margin-top:8px">
+          ☁️ Almacenamiento en la nube<br/>🔒 Respaldo automático en Firestore
         </div>
       </div>
     </div>
     <div style="margin-top:28px;background:var(--orange2);border:1px solid rgba(255,159,28,.3);border-radius:12px;padding:16px;font-size:13px;color:#e8c060">
       💡 <strong>Recomendación:</strong> Exporta el JSON al menos una vez por semana y guárdalo en Google Drive.
-      Los datos están respaldados automáticamente en Firebase Firestore.
     </div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SHARED MODAL CLOSE
+// SHARED
 // ═══════════════════════════════════════════════════════════════
 function closeModal() { document.getElementById('modalOv').classList.add('hidden'); }
-
 document.getElementById('modalOv')?.addEventListener('click', e => {
-  if (e.target === document.getElementById('modalOv')) closeModal();
+  if (e.target===document.getElementById('modalOv')) closeModal();
 });
 
-// ── Boot ──────────────────────────────────────────────────────
 init();
