@@ -8,39 +8,111 @@ async function init() {
   renderNav('/');
   allCamps = await API.get('/api/campeonatos');
   activeCamp = allCamps.find(c => c.estado === 'activo') || allCamps[0] || null;
-  renderCampBar();
+  renderCampCards();
   await loadCamp();
   setInterval(renderLive, 30000);
 }
 
-function renderCampBar() {
-  const bar = document.getElementById('campBar');
-  if (!bar || !allCamps.length) return;
-  bar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
-      <span style="font-size:11px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;font-weight:700">🏆 Campeonato:</span>
-      ${allCamps.map(c => `
-        <button class="cat-pill${c.id===activeCamp?.id?' on':''}" onclick="selectCamp('${c.id}')"
-                style="${c.estado==='finalizado'?'opacity:0.65':''}">
-          ${c.nombre}${c.estado==='activo'?' 🟢':''}
-        </button>`).join('')}
+function renderCampCards() {
+  const el = document.getElementById('campCards');
+  if (!el || !allCamps.length) return;
+  el.innerHTML = `
+    <div style="font-size:10px;font-weight:800;color:var(--teal);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">🏆 Campeonatos</div>
+    ${allCamps.map(c => `
+      <div class="camp-selector${c.id===activeCamp?.id?' camp-active':''}" onclick="selectCamp('${c.id}')">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:${c.id===activeCamp?.id?'var(--teal)':'var(--white)'}">
+              ${c.nombre}
+            </div>
+            <div style="font-size:10px;color:#5a9aaa;margin-top:2px">
+              ${c.estado==='activo'?'🟢 En curso':c.estado==='finalizado'?'✅ Finalizado':'⏸ Pendiente'}
+            </div>
+          </div>
+          ${c.id===activeCamp?.id?'<span style="color:var(--teal);font-size:20px;font-weight:900">›</span>':''}
+        </div>
+      </div>`).join('')}
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn-cta btn-cta-main" href="#sec-live" style="padding:10px 18px;font-size:12px">🔴 En Vivo</a>
+      <a class="btn-cta btn-cta-out" href="/programacion.html" style="padding:10px 18px;font-size:12px">📅 Programación</a>
     </div>`;
 }
 
 async function selectCamp(id) {
   activeCamp = allCamps.find(c => c.id === id) || null;
-  renderCampBar();
+  renderCampCards();
   await loadCamp();
 }
 
+// ── Hero right: mini-tabla + próximos ────────────
+let _heroTCat = '';
+async function renderHeroRight() {
+  const el = document.getElementById('heroRight');
+  if (!el || !activeCamp) return;
+  if (!_heroTCat) _heroTCat = cats[0]?.nombre || '';
+
+  const cat = cats.find(c => c.nombre === _heroTCat);
+  const [standings, partidos] = await Promise.all([
+    cat ? API.get(`/api/standings?campeonato_id=${activeCamp.id}&categoria_id=${cat.id}`) : Promise.resolve([]),
+    API.get(`/api/partidos?campeonato_id=${activeCamp.id}`),
+  ]);
+
+  const proximos = partidos
+    .filter(p => p.estado === 'programado' || p.estado === 'en_vivo')
+    .sort((a,b) => a.fecha.localeCompare(b.fecha)||(a.hora||'').localeCompare(b.hora||''))
+    .slice(0, 6);
+
+  const catPills = cats.map(c =>
+    `<button class="cat-pill${c.nombre===_heroTCat?' on':''}" onclick="setHeroTCat('${c.nombre}')"
+             style="padding:3px 10px;font-size:10px">${c.nombre}</button>`
+  ).join('');
+
+  const tablaRows = standings.slice(0, 6).map((r, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(0,212,170,.07)">
+      <span style="font-size:12px;width:18px;text-align:center;flex-shrink:0">${medal(i)}</span>
+      <span style="flex:1;font-weight:700;font-size:12px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.nombre}</span>
+      <span style="font-size:10px;color:#5a9aaa;flex-shrink:0">${r.pj}j</span>
+      <span style="font-size:13px;font-weight:800;color:var(--teal);min-width:30px;text-align:right;flex-shrink:0">${r.pts}pts</span>
+    </div>`).join('');
+
+  const proximosRows = proximos.map(p => `
+    <div style="background:rgba(0,212,170,.05);border:1px solid rgba(0,212,170,.1);border-radius:8px;padding:8px 10px;margin-bottom:7px">
+      <div style="font-size:10px;color:#5a9aaa;margin-bottom:4px">
+        ${p.categoria}${p.fase?' · <span style="color:rgba(255,159,28,.8)">'+p.fase+'</span>':''} · ${fmt(p.fecha)}${p.hora?' '+p.hora:''}${p.campo?' · C.'+p.campo:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-weight:800;font-size:12px;color:var(--white);flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.local_nombre}</span>
+        ${p.estado==='en_vivo'
+          ? `<span style="font-weight:800;color:var(--live);font-size:12px;flex-shrink:0">${p.goles_local??0}–${p.goles_visitante??0}</span>`
+          : `<span style="font-size:10px;color:#5a9aaa;border:1px solid rgba(90,154,170,.3);border-radius:4px;padding:1px 5px;flex-shrink:0">VS</span>`}
+        <span style="font-weight:800;font-size:12px;color:var(--white);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.visita_nombre}</span>
+      </div>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="hero-rpanel">
+        <div class="hero-rpanel-ttl" style="color:var(--teal)">🏆 Tabla de Posiciones</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${catPills}</div>
+        ${standings.length ? tablaRows + `<a href="/#sec-tabla" style="display:block;margin-top:8px;font-size:10px;color:#5a9aaa;text-align:center">Ver tabla completa ↓</a>` : '<p class="empty" style="font-size:12px">Sin datos aún</p>'}
+      </div>
+      <div class="hero-rpanel">
+        <div class="hero-rpanel-ttl" style="color:var(--orange)">📅 Próximos Partidos</div>
+        ${proximos.length ? proximosRows + `<a class="btn btn-ghost btn-xs" href="/programacion.html" style="display:block;text-align:center;margin-top:6px">Ver todo →</a>` : '<p class="empty" style="font-size:12px">Sin partidos próximos</p>'}
+      </div>
+    </div>`;
+}
+function setHeroTCat(c) { _heroTCat = c; renderHeroRight(); }
+
 async function loadCamp() {
   if (!activeCamp) return;
+  _heroTCat = '';
   cats = await API.get(`/api/categorias?campeonato_id=${activeCamp.id}`);
   tCat = cats[0]?.nombre || '';
   sCat = cats[0]?.nombre || '';
   jCat = cats[0]?.nombre || '';
   await Promise.all([
-    renderStatsBar(), renderLive(), renderProgramacion(), renderResultados(),
+    renderHeroRight(), renderStatsBar(), renderLive(), renderProgramacion(), renderResultados(),
     renderTabla(), renderStats(), renderJugadores(), renderNoticias(),
   ]);
 }

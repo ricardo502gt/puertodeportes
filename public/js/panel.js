@@ -302,6 +302,9 @@ async function deleteCat(id) {
 // ═══════════════════════════════════════════════════════════════
 // TAB: PARTIDOS
 // ═══════════════════════════════════════════════════════════════
+const FASE_ORDER = ['Jornada I','Jornada II','Jornada III','Jornada IV','Jornada V',
+                    '4tos de Final','Semifinal','Tercer Lugar','Final'];
+
 async function renderPartidos() {
   if (!pCamp) return noCampMsg();
   const cat = cats.find(c => c.nombre === pCat);
@@ -310,11 +313,50 @@ async function renderPartidos() {
   const partidos = await API.get(url).catch(() => []);
   const canAdd = cu.rol !== 'delegado';
 
+  // Sort by fecha ASC then hora ASC
+  partidos.sort((a, b) => {
+    const d = (a.fecha||'').localeCompare(b.fecha||'');
+    if (d !== 0) return d;
+    return (a.hora||'23:59').localeCompare(b.hora||'23:59');
+  });
+
+  // Group by fase (or date if no fase)
+  const groups = new Map();
+  partidos.forEach(p => {
+    const key = p.fase || `📅 ${fmt(p.fecha)}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  });
+
+  // Sort groups: known phases in order, then alphabetically for dates
+  const sorted = [...groups.entries()].sort(([a], [b]) => {
+    const ai = FASE_ORDER.indexOf(a), bi = FASE_ORDER.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  const groupHtml = sorted.map(([fase, ps]) => `
+    <div style="margin-bottom:26px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;color:var(--orange);
+                  background:linear-gradient(90deg,rgba(255,159,28,.13),transparent);
+                  border-left:3px solid var(--orange);border-radius:0 8px 8px 0;
+                  padding:8px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        ${fase}
+        <span style="font-size:11px;color:#5a9aaa;font-weight:400;font-family:'Nunito',sans-serif;letter-spacing:0">
+          · ${ps.length} partido${ps.length > 1 ? 's' : ''}
+        </span>
+      </div>
+      ${ps.map(partidoCard).join('')}
+    </div>`).join('');
+
   document.getElementById('pMain').innerHTML = `
-    ${canAdd ? `<div style="display:flex;justify-content:flex-end;margin-bottom:16px">
-      <button class="btn btn-t" onclick="openPartidoModal()">+ Programar Partido</button>
-    </div>` : ''}
-    ${!partidos.length ? '<p class="empty">No hay partidos en este campeonato.</p>' : partidos.map(p => partidoCard(p)).join('')}`;
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div style="font-size:13px;color:var(--text)">${partidos.length} partido${partidos.length !== 1 ? 's' : ''}</div>
+      ${canAdd ? `<button class="btn btn-t" onclick="openPartidoModal()">+ Programar Partido</button>` : ''}
+    </div>
+    ${!partidos.length ? '<p class="empty">No hay partidos en este campeonato.</p>' : groupHtml}`;
 }
 
 function partidoCard(p) {

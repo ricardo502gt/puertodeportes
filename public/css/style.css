@@ -161,6 +161,20 @@ textarea { resize: vertical; min-height: 60px; }
 .btn-cta-out  { background: transparent; border: 2px solid var(--orange); color: var(--orange); }
 .btn-cta-out:hover  { background: var(--orange); color: var(--navy); transform: translateY(-3px); }
 
+/* CAMP SELECTOR (hero) */
+.camp-selector {
+  cursor:pointer; background:rgba(0,20,35,.55); border:1px solid var(--border);
+  border-radius:12px; padding:14px 18px; margin-bottom:10px;
+  transition:all .18s; user-select:none;
+}
+.camp-selector:hover { border-color:var(--teal); background:rgba(0,212,170,.07); }
+.camp-selector.camp-active { background:rgba(0,212,170,.12); border-color:var(--teal); box-shadow:0 0 18px rgba(0,212,170,.1); }
+.hero-right-panel { background:rgba(0,12,25,.55); border:1px solid var(--border); border-radius:14px; padding:16px; }
+#heroGrid { display:grid; grid-template-columns:minmax(210px,280px) 1fr; gap:18px; align-items:start; }
+@media(max-width:680px){ #heroGrid { grid-template-columns:1fr; } }
+.hero-rpanel { background:rgba(0,12,25,.55); border:1px solid var(--border); border-radius:14px; padding:16px 14px; }
+.hero-rpanel-ttl { font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px; }
+
 /* STATS BAR */
 .stats-bar { position: relative; z-index: 5; display: flex; justify-content: center; flex-wrap: wrap; background: rgba(0,8,16,.45); backdrop-filter: blur(10px); border-top: 1px solid var(--border); }
 .stat-item { padding: 18px 30px; text-align: center; border-right: 1px solid var(--border); }
