@@ -6,7 +6,9 @@ const path     = require('path');
 const fs       = require('fs');
 
 // ─── Firebase init ───────────────────────────────────────────
-const serviceAccount = require('./serviceAccount.json');
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  : require('./serviceAccount.json');
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   storageBucket: 'puerto-deportes.appspot.com',
