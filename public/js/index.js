@@ -39,7 +39,7 @@ async function loadCamp() {
   sCat = cats[0]?.nombre || '';
   jCat = cats[0]?.nombre || '';
   await Promise.all([
-    renderStatsBar(), renderLive(), renderResultados(),
+    renderStatsBar(), renderLive(), renderProgramacion(), renderResultados(),
     renderTabla(), renderStats(), renderJugadores(), renderNoticias(),
   ]);
 }
@@ -58,6 +58,47 @@ async function renderStatsBar() {
     <div class="stat-item"><div class="stat-n">${jugadores.length}</div><div class="stat-l">Jugadores</div></div>
     <div class="stat-item"><div class="stat-n">${jugados}</div><div class="stat-l">Partidos Jugados</div></div>
     <div class="stat-item"><div class="stat-n">${cats.length}</div><div class="stat-l">Categorías</div></div>`;
+}
+
+// ── Programación próxima ─────────────────────────
+async function renderProgramacion() {
+  if (!activeCamp) return;
+  const partidos = await API.get(`/api/partidos?campeonato_id=${activeCamp.id}`);
+  const proximos = partidos
+    .filter(p => p.estado === 'programado' || p.estado === 'en_vivo')
+    .sort((a,b) => a.fecha.localeCompare(b.fecha) || (a.hora||'').localeCompare(b.hora||''))
+    .slice(0, 8);
+  const el = document.getElementById('progGrid');
+  if (!proximos.length) {
+    el.innerHTML = '<p class="empty">No hay partidos programados próximamente.</p>';
+    return;
+  }
+  // Group by date
+  const groups = {};
+  proximos.forEach(p => { if (!groups[p.fecha]) groups[p.fecha]=[]; groups[p.fecha].push(p); });
+  el.innerHTML = Object.entries(groups).map(([fecha, ps]) => `
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--orange);
+                  padding-bottom:6px;border-bottom:1px solid rgba(255,159,28,.2);margin-bottom:10px">
+        📅 ${fmt(fecha)}
+      </div>
+      <div class="res-grid">${ps.map(p => `
+        <div class="res-card">
+          <div class="rc-meta">
+            <span class="badge badge-teal">${p.categoria}</span>
+            <span class="rc-date">${p.hora || 'Por confirmar'}</span>
+          </div>
+          <div class="rc-teams">
+            <span class="rc-team">${p.local_nombre}</span>
+            ${p.estado === 'en_vivo'
+              ? `<span class="rc-score" style="border-color:var(--live);color:var(--live)">${p.goles_local??0} - ${p.goles_visitante??0}</span>`
+              : `<span class="rc-vs">VS</span>`}
+            <span class="rc-team">${p.visita_nombre}</span>
+          </div>
+          ${p.notas ? `<div style="font-size:11px;color:#5a9aaa;text-align:center;margin-top:6px">📍 ${p.notas}</div>` : ''}
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
 }
 
 // ── En Vivo ──────────────────────────────────────
