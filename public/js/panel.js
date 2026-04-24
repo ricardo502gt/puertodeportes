@@ -327,7 +327,8 @@ function partidoCard(p) {
       <div class="mc-top">
         <div>
           <span class="badge badge-teal">${p.categoria}</span>
-          <span class="mc-meta" style="margin-left:8px">${fmt(p.fecha)}${p.hora?' · '+p.hora:''}</span>
+          ${p.fase ? `<span class="badge" style="background:rgba(255,159,28,.15);color:var(--orange);border:1px solid var(--orange);margin-left:4px">${p.fase}</span>` : ''}
+          <span class="mc-meta" style="margin-left:8px">${fmt(p.fecha)}${p.hora?' · '+p.hora:''}${p.campo?' · Campo '+p.campo:''}</span>
           ${isLive ? `<span class="badge badge-live" style="margin-left:6px">🔴 EN VIVO · ${p.minuto}'</span>` : ''}
         </div>
         <div class="mc-actions">
@@ -362,27 +363,55 @@ async function deletePartido(id) {
   showToast('Partido eliminado'); renderPartidos();
 }
 
+const FASES = ['Jornada I','Jornada II','Jornada III','Jornada IV','Jornada V',
+               '4tos de Final','Semifinal','Tercer Lugar','Final'];
+
 async function openPartidoModal(id = null) {
   const p = id ? await API.get(`/api/partidos/${id}`) : null;
+  const isLibre = p ? (!p.equipo_local_id && !p.equipo_visitante_id) : false;
   const catOptions = cats.map(c => `<option value="${c.id}"${p?.categoria===c.nombre?' selected':''}>${c.nombre}</option>`).join('');
   const firstCatId = cats[0]?.id || '';
   const localEqs   = allEquipos.filter(e => p ? e.categoria===p.categoria : e.categoria_id===firstCatId);
+  const faseOptions = FASES.map(f => `<option value="${f}"${p?.fase===f?' selected':''}>${f}</option>`).join('');
 
   document.getElementById('modalBox').innerHTML = `
     <div class="modal-ttl">${p?'Editar Partido':'Programar Partido'}<button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="fg">
+      <div><label class="fl">Fase / Jornada</label>
+        <select id="mFase"><option value="">— Seleccionar —</option>${faseOptions}</select>
+      </div>
       <div><label class="fl">Fecha</label><input type="date" id="mFecha" value="${p?.fecha||''}"/></div>
       <div><label class="fl">Hora</label><input type="time" id="mHora" value="${p?.hora||''}"/></div>
+    </div>
+    <div class="fg">
       <div><label class="fl">Categoría</label>
         <select id="mCat" onchange="updateEquipoSelects()">${catOptions}</select>
       </div>
+      <div><label class="fl">Campo #</label>
+        <input type="text" id="mCampo" placeholder="Ej: 1, 2, A" value="${p?.campo||''}" style="max-width:80px"/></div>
     </div>
-    <div class="fg">
-      <div><label class="fl">Equipo Local</label>
-        <select id="mLocal">${localEqs.map(e=>`<option value="${e.id}"${p?.equipo_local_id===e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
+    <div style="margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="mLibre" onchange="toggleLibreMode()" ${isLibre?'checked':''}/>
+        Equipos por definir (4tos, Semi, Final — sin equipo asignado aún)
+      </label>
+    </div>
+    <div id="mTeamsKnown" style="${isLibre?'display:none':''}">
+      <div class="fg">
+        <div><label class="fl">Equipo Local</label>
+          <select id="mLocal">${localEqs.map(e=>`<option value="${e.id}"${p?.equipo_local_id===e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
+        </div>
+        <div><label class="fl">Equipo Visitante</label>
+          <select id="mVisita">${localEqs.map(e=>`<option value="${e.id}"${p?.equipo_visitante_id===e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
+        </div>
       </div>
-      <div><label class="fl">Equipo Visitante</label>
-        <select id="mVisita">${localEqs.map(e=>`<option value="${e.id}"${p?.equipo_visitante_id===e.id?' selected':''}>${e.nombre}</option>`).join('')}</select>
+    </div>
+    <div id="mTeamsLibre" style="${isLibre?'':'display:none'}">
+      <div class="fg">
+        <div><label class="fl">Nombre Local</label>
+          <input type="text" id="mLocalLibre" placeholder="Ej: Tabla General 1" value="${isLibre?p?.local_nombre||'':''}"/></div>
+        <div><label class="fl">Nombre Visitante</label>
+          <input type="text" id="mVisitaLibre" placeholder="Ej: Tabla General 8" value="${isLibre?p?.visita_nombre||'':''}"/></div>
       </div>
     </div>
     <div style="margin-bottom:12px"><label class="fl">Notas / Cancha</label>
@@ -394,6 +423,12 @@ async function openPartidoModal(id = null) {
   document.getElementById('modalOv').classList.remove('hidden');
 }
 
+function toggleLibreMode() {
+  const libre = document.getElementById('mLibre').checked;
+  document.getElementById('mTeamsKnown').style.display = libre ? 'none' : '';
+  document.getElementById('mTeamsLibre').style.display = libre ? '' : 'none';
+}
+
 function updateEquipoSelects() {
   const catId = document.getElementById('mCat')?.value;
   const eqs = allEquipos.filter(e => e.categoria_id === catId);
@@ -403,19 +438,29 @@ function updateEquipoSelects() {
 }
 
 async function savePartido(id) {
+  const libre = document.getElementById('mLibre')?.checked;
   const data = {
-    fecha:               document.getElementById('mFecha').value,
-    hora:                document.getElementById('mHora').value,
-    categoria_id:        document.getElementById('mCat').value,
-    campeonato_id:       pCamp,
-    equipo_local_id:     document.getElementById('mLocal').value,
-    equipo_visitante_id: document.getElementById('mVisita').value,
-    notas:               document.getElementById('mNotas').value,
+    fecha:        document.getElementById('mFecha').value,
+    hora:         document.getElementById('mHora').value,
+    categoria_id: document.getElementById('mCat').value,
+    campeonato_id: pCamp,
+    fase:         document.getElementById('mFase').value || null,
+    campo:        document.getElementById('mCampo').value || null,
+    notas:        document.getElementById('mNotas').value,
   };
-  if (!data.fecha||!data.equipo_local_id||!data.equipo_visitante_id)
-    return showToast('Completa fecha y equipos', true);
-  if (data.equipo_local_id===data.equipo_visitante_id)
-    return showToast('Los equipos no pueden ser el mismo', true);
+  if (libre) {
+    data.local_nombre_libre  = document.getElementById('mLocalLibre').value.trim();
+    data.visita_nombre_libre = document.getElementById('mVisitaLibre').value.trim();
+    if (!data.fecha || !data.local_nombre_libre || !data.visita_nombre_libre)
+      return showToast('Completa fecha y nombres de equipos', true);
+  } else {
+    data.equipo_local_id     = document.getElementById('mLocal').value;
+    data.equipo_visitante_id = document.getElementById('mVisita').value;
+    if (!data.fecha || !data.equipo_local_id || !data.equipo_visitante_id)
+      return showToast('Completa fecha y equipos', true);
+    if (data.equipo_local_id === data.equipo_visitante_id)
+      return showToast('Los equipos no pueden ser el mismo', true);
+  }
   try {
     if (id) await API.put(`/api/partidos/${id}`, data);
     else    await API.post('/api/partidos', data);

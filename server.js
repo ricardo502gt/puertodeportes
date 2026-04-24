@@ -284,36 +284,54 @@ app.get('/api/partidos/:id', ar(async (req,res) => {
   res.json(p);
 }));
 app.post('/api/partidos', requireAdmin, ar(async (req,res) => {
-  const { fecha, hora, equipo_local_id, equipo_visitante_id, categoria_id, campeonato_id, notas } = req.body;
-  if (!fecha||!equipo_local_id||!equipo_visitante_id||!categoria_id||!campeonato_id)
+  const { fecha, hora, equipo_local_id, equipo_visitante_id, categoria_id, campeonato_id,
+          notas, fase, campo, local_nombre_libre, visita_nombre_libre } = req.body;
+  const libreMode = !equipo_local_id && !equipo_visitante_id;
+  if (!fecha || !categoria_id || !campeonato_id)
     return res.status(400).json({error:'Faltan datos'});
+  if (libreMode && (!local_nombre_libre || !visita_nombre_libre))
+    return res.status(400).json({error:'Escribe los nombres de los equipos'});
+  if (!libreMode && (!equipo_local_id || !equipo_visitante_id))
+    return res.status(400).json({error:'Selecciona ambos equipos'});
   const [local, visita, cat, camp] = await Promise.all([
-    one('equipos', equipo_local_id),
-    one('equipos', equipo_visitante_id),
+    libreMode ? null : one('equipos', equipo_local_id),
+    libreMode ? null : one('equipos', equipo_visitante_id),
     one('categorias', categoria_id),
     one('campeonatos', campeonato_id),
   ]);
   const id = await add('partidos', {
     fecha, hora:hora||null, campeonato_id, campeonato_nombre: camp?.nombre||'',
-    equipo_local_id, local_nombre:local?.nombre||'', local_escudo:local?.escudo||null,
-    equipo_visitante_id, visita_nombre:visita?.nombre||'', visita_escudo:visita?.escudo||null,
+    equipo_local_id:   libreMode ? null : equipo_local_id,
+    local_nombre:      libreMode ? (local_nombre_libre||'') : (local?.nombre||''),
+    local_escudo:      libreMode ? null : (local?.escudo||null),
+    equipo_visitante_id: libreMode ? null : equipo_visitante_id,
+    visita_nombre:     libreMode ? (visita_nombre_libre||'') : (visita?.nombre||''),
+    visita_escudo:     libreMode ? null : (visita?.escudo||null),
     categoria_id, categoria:cat?.nombre||'',
+    fase: fase||null, campo: campo||null,
     goles_local:null, goles_visitante:null, estado:'programado', minuto:0, notas:notas||null,
   });
   res.json({id});
 }));
 app.put('/api/partidos/:id', requireAdmin, ar(async (req,res) => {
-  const { fecha, hora, equipo_local_id, equipo_visitante_id, categoria_id, notas } = req.body;
+  const { fecha, hora, equipo_local_id, equipo_visitante_id, categoria_id,
+          notas, fase, campo, local_nombre_libre, visita_nombre_libre } = req.body;
+  const libreMode = !equipo_local_id && !equipo_visitante_id;
   const [local, visita, cat] = await Promise.all([
-    one('equipos', equipo_local_id),
-    one('equipos', equipo_visitante_id),
+    libreMode ? null : one('equipos', equipo_local_id),
+    libreMode ? null : one('equipos', equipo_visitante_id),
     one('categorias', categoria_id),
   ]);
   await set('partidos', req.params.id, {
     fecha, hora:hora||null,
-    equipo_local_id, local_nombre:local?.nombre||'', local_escudo:local?.escudo||null,
-    equipo_visitante_id, visita_nombre:visita?.nombre||'', visita_escudo:visita?.escudo||null,
-    categoria_id, categoria:cat?.nombre||'', notas:notas||null,
+    equipo_local_id:   libreMode ? null : equipo_local_id,
+    local_nombre:      libreMode ? (local_nombre_libre||'') : (local?.nombre||''),
+    local_escudo:      libreMode ? null : (local?.escudo||null),
+    equipo_visitante_id: libreMode ? null : equipo_visitante_id,
+    visita_nombre:     libreMode ? (visita_nombre_libre||'') : (visita?.nombre||''),
+    visita_escudo:     libreMode ? null : (visita?.escudo||null),
+    categoria_id, categoria:cat?.nombre||'',
+    fase: fase||null, campo: campo||null, notas:notas||null,
   });
   res.json({ok:true});
 }));

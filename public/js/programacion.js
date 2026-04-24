@@ -93,9 +93,10 @@ function progCard(p) {
       <div class="prog-meta">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="badge badge-teal">${p.categoria}</span>
+          ${p.fase?`<span class="badge" style="background:rgba(255,159,28,.15);color:var(--orange);border:1px solid rgba(255,159,28,.4)">${p.fase}</span>`:''}
           ${isLive?`<span class="badge badge-live">🔴 EN VIVO · ${p.minuto}'</span>`:''}
           ${isDone?'<span class="badge badge-teal">✅ Finalizado</span>':''}
-          <span class="prog-fecha">${p.hora||''}</span>
+          <span class="prog-fecha">${p.hora||''}${p.campo?' · Campo '+p.campo:''}</span>
         </div>
         <button class="btn btn-ghost btn-xs" onclick="openConvModal('${p.id}')">👥 Ver Convocatoria</button>
       </div>

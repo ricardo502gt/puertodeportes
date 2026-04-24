@@ -86,7 +86,8 @@ async function renderProgramacion() {
         <div class="res-card">
           <div class="rc-meta">
             <span class="badge badge-teal">${p.categoria}</span>
-            <span class="rc-date">${p.hora || 'Por confirmar'}</span>
+            ${p.fase ? `<span class="badge" style="background:rgba(255,159,28,.15);color:var(--orange);border:1px solid rgba(255,159,28,.4)">${p.fase}</span>` : ''}
+            <span class="rc-date">${p.hora || 'Por confirmar'}${p.campo?' · Campo '+p.campo:''}</span>
           </div>
           <div class="rc-teams">
             <span class="rc-team">${p.local_nombre}</span>
