@@ -2,6 +2,7 @@
 // Programación page — Liga Caribe
 // ═══════════════════════════════════════════════
 let allCamps = [], activeCamp = null, cats = [], selCat = 'Todos', selVista = 'proximos';
+let _shareGroups = {};
 
 const VISTAS = [
   { key:'proximos',   label:'📅 Próximos' },
@@ -71,14 +72,17 @@ async function renderProgramacion() {
 
   if (!partidos.length) { el.innerHTML = '<p class="empty">No hay partidos con esos filtros.</p>'; return; }
 
-  const groups = {};
-  partidos.forEach(p => { if (!groups[p.fecha]) groups[p.fecha]=[]; groups[p.fecha].push(p); });
+  _shareGroups = {};
+  partidos.forEach(p => { if (!_shareGroups[p.fecha]) _shareGroups[p.fecha]=[]; _shareGroups[p.fecha].push(p); });
 
-  el.innerHTML = Object.entries(groups).map(([fecha,ps])=>`
+  el.innerHTML = Object.entries(_shareGroups).map(([fecha,ps])=>`
     <div style="margin-bottom:28px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--orange);
+      <div style="display:flex;align-items:center;justify-content:space-between;
                   padding-bottom:8px;border-bottom:1px solid rgba(255,159,28,.2);margin-bottom:12px">
-        📅 ${fmt(fecha)}
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--orange)">
+          📅 ${fmt(fecha)}
+        </div>
+        <button class="btn btn-ghost btn-xs" onclick="shareJornada('${fecha}')">📤 Compartir</button>
       </div>
       <div class="prog-list">${ps.map(progCard).join('')}</div>
     </div>`).join('');
@@ -165,5 +169,82 @@ async function openConvModal(partidoId) {
 }
 
 function closeConvModal() { document.getElementById('convModal').classList.add('hidden'); }
+
+// ── Share como imagen ─────────────────────────────
+async function shareJornada(fecha) {
+  const ps = _shareGroups[fecha] || [];
+  if (!ps.length) return;
+
+  const campNombre = activeCamp?.nombre || 'Liga Caribe';
+  const fases = [...new Set(ps.map(p => p.fase).filter(Boolean))];
+  const faseLabel = fases.length ? fases.join(' · ') : '';
+
+  const matchRows = ps.map(p => `
+    <div style="background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.18);
+                border-radius:10px;padding:11px 14px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+        <span style="font-size:11px;color:#00d4aa;font-weight:800;text-transform:uppercase;letter-spacing:.5px">${p.categoria}${p.fase?' · '+p.fase:''}</span>
+        <span style="font-size:11px;color:#5a9aaa">${p.hora||'Sin hora'}${p.campo?' &nbsp;·&nbsp; Campo '+p.campo:''}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-weight:900;font-size:13px;color:#fff;flex:1;text-align:right">${p.local_nombre}</span>
+        <span style="font-size:11px;font-weight:700;color:#5a9aaa;padding:2px 8px;border:1px solid rgba(90,154,170,.4);border-radius:6px">VS</span>
+        <span style="font-weight:900;font-size:13px;color:#fff;flex:1">${p.visita_nombre}</span>
+      </div>
+      ${p.notas?`<div style="font-size:10px;color:#5a9aaa;margin-top:5px">📍 ${p.notas}</div>`:''}
+    </div>`).join('');
+
+  const card = document.getElementById('shareCard');
+  card.innerHTML = `
+    <div style="width:540px;background:linear-gradient(145deg,#001526,#002640);
+                border:2px solid #00d4aa;border-radius:18px;padding:22px 22px 18px;
+                font-family:'Nunito',Arial,sans-serif;box-sizing:border-box">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                  border-bottom:1px solid rgba(0,212,170,.25);padding-bottom:14px;margin-bottom:16px">
+        <div>
+          <div style="font-size:26px;font-weight:900;color:#00d4aa;letter-spacing:2px;line-height:1">
+            ⚽ LIGA CARIBE
+          </div>
+          <div style="font-size:10px;color:#5a9aaa;letter-spacing:2px;text-transform:uppercase;margin-top:3px">
+            Puerto Barrios · Izabal · Guatemala
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:800;color:#ff9f1c">${campNombre}</div>
+          ${faseLabel?`<div style="font-size:11px;color:rgba(255,159,28,.8);margin-top:2px">${faseLabel}</div>`:''}
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:800;color:#ff9f1c;letter-spacing:1px;margin-bottom:13px">
+        📅 ${fmt(fecha)}
+      </div>
+      ${matchRows}
+      <div style="margin-top:14px;text-align:center;font-size:10px;color:#3a7080;letter-spacing:1px">
+        puertodeportes.com
+      </div>
+    </div>`;
+  card.style.display = 'block';
+
+  try {
+    const node = card.firstElementChild;
+    const canvas = await html2canvas(node, {
+      backgroundColor: null, scale: 2, useCORS: true, logging: false,
+    });
+    card.style.display = 'none';
+    canvas.toBlob(async blob => {
+      const file = new File([blob], `liga-caribe-${fecha}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Liga Caribe · ${fmt(fecha)}` });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `liga-caribe-${fecha}.png`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    }, 'image/png');
+  } catch (e) {
+    card.style.display = 'none';
+    alert('No se pudo generar la imagen. Intenta de nuevo.');
+  }
+}
 
 init();
