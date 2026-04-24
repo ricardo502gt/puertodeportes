@@ -123,7 +123,7 @@ function renderNav(activePage) {
         <a class="nav-brand" href="/">
           <span class="nav-ball">⚽</span>
           <div>
-            <div class="nav-name">LIGA CARIBE</div>
+            <div class="nav-name">LIGA CARIBE <span style="font-size:11px;font-family:'Nunito',sans-serif;color:var(--teal);letter-spacing:1px;font-weight:700">· Hermanos Sagastume</span></div>
             <div class="nav-loc">Puerto Barrios · Izabal · 2026</div>
           </div>
         </a>
